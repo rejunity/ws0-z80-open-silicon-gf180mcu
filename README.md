@@ -1,6 +1,6 @@
-# gf180mcu Project Template
+# Silicon clone of Zilog's Z80 for wafer.space MPW using the gf180mcu PDK.
 
-Project template for wafer.space MPW runs using the gf180mcu PDK.
+Base code repository: https://github.com/rejunity/z80-open-silicon
 
 ## Prerequisites
 
