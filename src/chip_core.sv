@@ -36,9 +36,6 @@ module chip_core #(
 
     // See here for usage: https://gf180mcu-pdk.readthedocs.io/en/latest/IPs/IO/gf180mcu_fd_io/digital.html
     
-    // Disable pull-up and pull-down for input
-    assign input_pu = '0;
-
     assign bidir_cs = '0;
     assign bidir_sl = '0;
     assign bidir_ie = ~bidir_oe;
@@ -46,7 +43,8 @@ module chip_core #(
     assign bidir_pd = '0;
     
     logic _unused;
-    assign _unused = &bidir_in;
+    assign _unused = &{input_in[NUM_INPUT_PADS-1 : 9],
+                       bidir_in[NUM_BIDIR_PADS-1 : 8]};
 
 
 
@@ -57,6 +55,7 @@ module chip_core #(
     // @TODO: float A, D, MREQ, RD, WR, IORQ pins on BUSAK (Figure 10 BUS Request/Acknowledge Cycle)
 
     // 8 bidirectional data bus pins
+    wire data_oe;
     assign bidir_oe[7:0]        
                                 = {8{data_oe}}; // 1 = Output | 0 = Input
 
@@ -81,8 +80,10 @@ module chip_core #(
     // set the rest of input pull-downs off
     assign input_pd[NUM_INPUT_PADS-1:9] = '0;
 
+    // Disable pull-down for input
+    assign input_pu = '0;
 
-    wire data_oe;
+
     z80 z80 (
         .clk     (clk),
         .cen     (1'b1),
@@ -94,19 +95,19 @@ module chip_core #(
         .nmi_n   (input_in[2]),
         .busrq_n (input_in[3]),
 
-        .di      ({bidir_in [0], bidir_in [1], bidir_in [2], bidir_in [3], bidir_in [4], bidir_in [5], bidir_in [6], bidir_in [7]}),
-        .dout    ({bidir_out[0], bidir_out[1], bidir_out[2], bidir_out[3], bidir_out[4], bidir_out[5], bidir_out[6], bidir_out[7]}),
+        .di      ({bidir_in [7:0]}),
+        .dout    ({bidir_out[7:0]}),
         .doe     (data_oe),
-        .A       ({bidir_out[8+:16]}),
+        .A       ({bidir_out[23:8]}),
 
-        .halt_n  (bidir_out[24 + 0]),
-        .busak_n (bidir_out[24 + 1]),
-        .m1_n    (bidir_out[24 + 2]),
-        .mreq_n  (bidir_out[24 + 3]),
-        .iorq_n  (bidir_out[24 + 4]),
-        .rd_n    (bidir_out[24 + 5]),
-        .wr_n    (bidir_out[24 + 6]),
-        .rfsh_n  (bidir_out[24 + 7]),
+        .halt_n  (bidir_out[24 + 6]),
+        .busak_n (bidir_out[24 + 7]),
+        .m1_n    (bidir_out[24 + 0]),
+        .mreq_n  (bidir_out[24 + 1]),
+        .iorq_n  (bidir_out[24 + 2]),
+        .rd_n    (bidir_out[24 + 3]),
+        .wr_n    (bidir_out[24 + 4]),
+        .rfsh_n  (bidir_out[24 + 5]),
         
         .early_signals(input_in[8:4])
     );
