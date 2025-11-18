@@ -193,38 +193,38 @@ add_pdn_connect \
     -grid macro \
     -layers "$::env(PDN_VERTICAL_LAYER) $::env(PDN_HORIZONTAL_LAYER)"
 
-# SRAM macros
+# Z80 does not use SRAM macros
 
-define_pdn_grid \
-    -macro \
-    -instances i_chip_core.sram_0 \
-    -name sram_macros_NS \
-    -starts_with POWER \
-    -halo "$::env(PDN_HORIZONTAL_HALO) $::env(PDN_VERTICAL_HALO)"
+# define_pdn_grid \
+#     -macro \
+#     -instances i_chip_core.sram_0 \
+#     -name sram_macros_NS \
+#     -starts_with POWER \
+#     -halo "$::env(PDN_HORIZONTAL_HALO) $::env(PDN_VERTICAL_HALO)"
 
-add_pdn_connect \
-    -grid sram_macros_NS \
-    -layers "$::env(PDN_VERTICAL_LAYER) $::env(PDN_HORIZONTAL_LAYER)"
+# add_pdn_connect \
+#     -grid sram_macros_NS \
+#     -layers "$::env(PDN_VERTICAL_LAYER) $::env(PDN_HORIZONTAL_LAYER)"
 
-add_pdn_connect \
-    -grid sram_macros_NS \
-    -layers "$::env(PDN_VERTICAL_LAYER) Metal3"
+# add_pdn_connect \
+#     -grid sram_macros_NS \
+#     -layers "$::env(PDN_VERTICAL_LAYER) Metal3"
 
-add_pdn_stripe -grid sram_macros_NS -layer Metal4 -width 2.36 -offset 1.18 -spacing 0.28 -pitch 426.86 -starts_with GROUND -number_of_straps 2
+# add_pdn_stripe -grid sram_macros_NS -layer Metal4 -width 2.36 -offset 1.18 -spacing 0.28 -pitch 426.86 -starts_with GROUND -number_of_straps 2
 
-define_pdn_grid \
-    -macro \
-    -instances i_chip_core.sram_1 \
-    -name sram_macros_WE \
-    -starts_with POWER \
-    -halo "$::env(PDN_HORIZONTAL_HALO) $::env(PDN_VERTICAL_HALO)"
+# define_pdn_grid \
+#     -macro \
+#     -instances i_chip_core.sram_1 \
+#     -name sram_macros_WE \
+#     -starts_with POWER \
+#     -halo "$::env(PDN_HORIZONTAL_HALO) $::env(PDN_VERTICAL_HALO)"
 
-add_pdn_connect \
-    -grid sram_macros_WE \
-    -layers "$::env(PDN_VERTICAL_LAYER) $::env(PDN_HORIZONTAL_LAYER)"
+# add_pdn_connect \
+#     -grid sram_macros_WE \
+#     -layers "$::env(PDN_VERTICAL_LAYER) $::env(PDN_HORIZONTAL_LAYER)"
 
-add_pdn_connect \
-    -grid sram_macros_WE \
-    -layers "$::env(PDN_VERTICAL_LAYER) Metal3"
+# add_pdn_connect \
+#     -grid sram_macros_WE \
+#     -layers "$::env(PDN_VERTICAL_LAYER) Metal3"
 
-add_pdn_stripe -grid sram_macros_WE -layer Metal4 -width 2.36 -offset 1.18 -spacing 0.28 -pitch 479.88 -starts_with GROUND -number_of_straps 2
+# add_pdn_stripe -grid sram_macros_WE -layer Metal4 -width 2.36 -offset 1.18 -spacing 0.28 -pitch 479.88 -starts_with GROUND -number_of_straps 2
