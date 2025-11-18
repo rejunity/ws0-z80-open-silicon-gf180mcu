@@ -40,7 +40,7 @@ async def start_clock(clock, freq=50):
     cocotb.start_soon(c.start())
 
 
-async def reset(reset, active_low=True, time_ns=1000):
+async def reset(clk, reset, active_low=True, time_ns=1000):
     """Reset dut"""
     cocotb.log.info("Reset asserted...")
 
@@ -58,7 +58,7 @@ async def start_up(dut):
         await enable_power(dut)
     await start_clock(dut.clk_PAD, Z80_FREQ)
 
-    await reset(dut.rst_n_PAD)
+    await reset(dut.clk_PAD, dut.rst_n_PAD)
 
 
 CONFIG_EARLY_SIGNALS = 0b00000
