@@ -303,9 +303,9 @@ MACROS:
 
 # This is an alternative method compared to
 # specifying the power connections in the RTL
-PDN_MACRO_CONNECTIONS:
-- "i_chip_core.sram_0 VDD VSS VDD VSS"
-- "i_chip_core.sram_1 VDD VSS VDD VSS"
+# PDN_MACRO_CONNECTIONS:
+# - "i_chip_core.sram_0 VDD VSS VDD VSS"
+# - "i_chip_core.sram_1 VDD VSS VDD VSS"
 
 # Halo size around macros while cutting rows.
 # Workaround for: https://github.com/The-OpenROAD-Project/OpenROAD/issues/8868
