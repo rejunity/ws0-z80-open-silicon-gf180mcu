@@ -28,6 +28,12 @@ DESIGN_NAME: chip_top
 VERILOG_FILES:
 - dir::../src/chip_top.sv
 - dir::../src/chip_core.sv
+- dir::../src/ws_z80.v
+- dir::../src/tv80s.v
+- dir::../src/tv80_alu.v
+- dir::../src/tv80_core.v
+- dir::../src/tv80_mcode.v
+- dir::../src/tv80_reg.v
 
 # Enable plugin for better SystemVerilog support
 # USE_SLANG: True
@@ -267,28 +273,29 @@ MACROS:
         location: [3762.75, 4952.75]
         orientation: N
 
-  gf180mcu_fd_ip_sram__sram512x8m8wm1:
-    gds:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram512x8m8wm1.gds
-    lef:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram512x8m8wm1.lef
-    vh:
-      - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram512x8m8wm1__blackbox.v
-    lib:
-      "*_tt_025C_5v00":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__tt_025C_5v00.lib
-      "*_ff_n40C_5v50":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ff_n40C_5v50.lib
-      "*_ss_125C_4v50":
-        - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ss_125C_4v50.lib
-    instances:
-      # Make sure to specify the SRAMs in pdn_cfg.tcl
-      i_chip_core.sram_0:
-        location: [500, 501]
-        orientation: N
-      i_chip_core.sram_1:
-        location: [1000, 501]
-        orientation: E
+# Z80 does not need SRAM blocks
+# gf180mcu_fd_ip_sram__sram512x8m8wm1:
+#   gds:
+#     - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/gds/gf180mcu_fd_ip_sram__sram512x8m8wm1.gds
+#   lef:
+#     - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lef/gf180mcu_fd_ip_sram__sram512x8m8wm1.lef
+#   vh:
+#     - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/verilog/gf180mcu_fd_ip_sram__sram512x8m8wm1__blackbox.v
+#   lib:
+#     "*_tt_025C_5v00":
+#       - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__tt_025C_5v00.lib
+#     "*_ff_n40C_5v50":
+#       - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ff_n40C_5v50.lib
+#     "*_ss_125C_4v50":
+#       - pdk_dir::libs.ref/gf180mcu_fd_ip_sram/lib/gf180mcu_fd_ip_sram__sram512x8m8wm1__ss_125C_4v50.lib
+#   instances:
+#     # Make sure to specify the SRAMs in pdn_cfg.tcl
+#     i_chip_core.sram_0:
+#       location: [500, 501]
+#       orientation: N
+#     i_chip_core.sram_1:
+#       location: [1000, 501]
+#       orientation: E
 
 # This is an alternative method compared to
 # specifying the power connections in the RTL
