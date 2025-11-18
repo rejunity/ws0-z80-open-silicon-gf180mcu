@@ -73,13 +73,12 @@ async def test__NOP(dut):
 
     opcode = OPCODE_NOP
     cycles_per_instr = 4
-
-    # await set_inputs(dut, BUS_READY, opcode)
-    await ClockCycles(dut.clk_PAD, 1)
     
     z80_cycle = 0
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
+        if z80_cycle == 0 and controls['m1'] == 0:
+            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
@@ -103,12 +102,11 @@ async def test__LD_HL2121(dut):
     opcode = OPCODE_LDHL
     cycles_per_instr = 10
 
-    # await set_inputs(dut, BUS_READY, opcode)
-    await ClockCycles(dut.clk_PAD, 1)
-
     z80_cycle = 0
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
+        if z80_cycle == 0 and controls['m1'] == 0:
+            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
