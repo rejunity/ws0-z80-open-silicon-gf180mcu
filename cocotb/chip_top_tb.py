@@ -20,6 +20,8 @@ gl = os.getenv("GL", False)
 
 hdl_toplevel = "chip_top"
 
+Z80_FREQ = 4 # in MHz
+
 async def set_defaults(dut):
     dut.input_PAD.value = 0
     dut.bidir_PAD.value = LogicArray('Z' * 32 + '0' * 8)
@@ -54,7 +56,7 @@ async def start_up(dut):
     await set_defaults(dut)
     if gl:
         await enable_power(dut)
-    await start_clock(dut.clk_PAD)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
 
     await reset(dut.rst_n_PAD)
 
