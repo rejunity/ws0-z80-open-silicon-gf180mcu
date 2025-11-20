@@ -1,6 +1,14 @@
-# Silicon clone of Zilog's Z80 for wafer.space MPW using the gf180mcu PDK.
+# Silicon clone of Zilog's Z80 for fabrication with Global Foundry 180 nm process via Wafer.space MPW.
 
 Base code repository: https://github.com/rejunity/z80-open-silicon
+
+<p align="center" width="100%">
+    <img width="30%" src="./docs/gds_klayout_11_18.png">
+</p>
+
+## Wafer Space + Global Foundry 180 nm
+
+To know more about budget silicon manufacturing: https://wafer.space
 
 ## Prerequisites
 
@@ -75,19 +83,6 @@ You can view it using a waveform viewer, for example, [GTKWave](https://gtkwave.
 ```
 make sim-view
 ```
-
-You can now update the testbench according to your design.
-
-## Implementing Your Own Design
-
-The source files for this template can be found in the `src/` directory. `chip_top.sv` defines the top-level ports and instantiates `chip_core`, chip ID (QR code) and the wafer.space logo. To allow for the default bonding setup, do not change the number of pads in order to keep the original bondpad positions. To be compatible with the default breakout PCB, do not change any of the power or ground pads. However, you can change the type of the signal pads, e.g. to bidirectional, input-only or e.g. analog pads. The template provides the `NUM_INPUT` and `NUM_BIDIR` parameters for this purpose.
-
-The actual pad positions are defined in the LibreLane configuration file under `librelane/config.yaml`. The variables `PAD_SOUTH`/`PAD_EAST`/`PAD_NORTH`/`PAD_WEST` determine the respective pad placement. The LibreLane configuration also allows you to customize the flow (enable or disable steps), specify the source files, set various variables for the steps, and instantiate macros. For more information about the configuration, please refer to the LibreLane documentation: https://librelane.readthedocs.io/en/latest/
-
-To implement your own design, simply edit `chip_core.sv`. The `chip_core` module receives the clock and reset, as well as the signals from the pads defined in `chip_top`. As an example, a 42-bit wide counter is implemented.
-
-> [!NOTE]
-> For more comprehensive SystemVerilog support, enable the `USE_SLANG` variable in the LibreLane configuration.
 
 ## Precheck
 
