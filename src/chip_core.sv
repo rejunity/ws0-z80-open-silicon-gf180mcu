@@ -156,6 +156,7 @@ module chip_core #(
     //     .A    ('0),
     //     .D    ('0),
     //     .Q    (sram_1_out)
+    // );
 
     // assign bidir_out = count ^ {24'd0, sram_0_out, sram_1_out};
 
