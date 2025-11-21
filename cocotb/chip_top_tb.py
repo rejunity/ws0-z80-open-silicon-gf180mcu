@@ -15,7 +15,7 @@ from cocotb_tools.runner import get_runner
 sim = os.getenv("SIM", "icarus")
 pdk_root = os.getenv("PDK_ROOT", Path("~/.ciel").expanduser())
 pdk = os.getenv("PDK", "gf180mcuD")
-scl = os.getenv("SCL", "gf180mcu_fd_sc_mcu7t5v0")
+scl = os.getenv("SCL", "gf180mcu_fd_sc_mcu9t5v0") # default is: gf180mcu_fd_sc_mcu7t5v0
 gl = os.getenv("GL", False)
 
 hdl_toplevel = "chip_top"
