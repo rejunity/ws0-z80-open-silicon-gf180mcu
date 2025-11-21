@@ -168,6 +168,8 @@ CLOCK_NET: clk_pad/Y
 
 CLOCK_PERIOD: 40 # 25 MHz
 
+STD_CELL_LIBRARY: "gf180mcu_fd_sc_mcu9t5v0"
+
 # Floorplanning
 FP_SIZING: absolute
 # 3880umx5070um including 26um
