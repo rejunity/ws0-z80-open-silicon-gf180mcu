@@ -41,107 +41,145 @@ VERILOG_FILES:
 # Slightly smaller file sizes
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 
-# Specify the pad instances for the padring
-PAD_SOUTH: [
-    clk_pad,
-    rst_n_pad,
 
-    "bidir\\[0\\].pad",
+# Mapping of the chip_core signals to padring pads.
+#
+# Layout here matches orientation of the GDSII. Pads are numbered counter-clockwise.
+# Note that the actual orientation chip on PCB might be different.
+#
+#                    52  50  48  46  44  42  40  38
+#                  53| 51| 49| 47| 45| 43| 41| 39| 37
+#                  | | | | | | | | | | | | | | | | |
+#           ,------v-v-v-v-v-v-v-v---v-v-v-v-v-v-v-v-------.
+#           |      a a b b b b b b G b b b b b b b b       |
+#     54 -->|i_0   1 0 3 3 3 3 3 3 N 3 3 3 3 2 2 2 2   VDD |+-- 36
+#     55 -->|i_1       9 8 7 6 5 4 D 3 2 1 0 9 8 7 6   GND |--- 35
+#     56 ---|GND                                       VDD |+-- 34
+#     57 --+|VDD                                       GND |--- 33
+#     58 -->|i_2                                       b_25|<-> 32
+#     59 -->|i_3                                       b_24|<-> 31
+#     60 -->|i_4                                       b_23|<-> 30
+#     61 -->|i_5                   |                   b_22|<-> 29
+#     62 ---|GND                 WAFER                 b_21|<-> 28
+#     63 --+|VDD                -SPACE-                b_20|<-> 27
+#     64 -->|i_6                 GF180                 GND |--- 26
+#     65 -->|i_7                   |                   VDD |+-- 25
+#     66 -->|i_8                                       b_19|<-> 24
+#     67 -->|i_9                                       b_18|<-> 23
+#     68 -->|i_10                                      b_17|<-> 22
+#     69 -->|i_11                                      b_16|<-> 21
+#     70 ---|GND                                       b_15|<-> 20
+#     71 --+|VDD                                       b_14|<-> 19
+#     72 ---|GND   c r b b b b b b G b b b b b b b b   GND |--- 18
+#     73 --+|VDD   l s 0 1 2 3 4 5 N 6 7 8 9 1 1 1 1   VDD |+-- 17
+#           |      k t             D         0 1 2 3       |
+#           `------^-^-^-^-^-^-^-^---^-^-^-^-^-^-^-^-------'
+#                  | | | | | | | | | | | | | | | | |
+#                  0 | 2 | 4 | 6 | 8 | 10| 12| 14| 16
+#                    1   3   5   7   9  11  13  15
+
+# Pads from 0 to 16 - BOTTOM row, numbered from LEFT to RIGHT. See the chip diagram above.
+PAD_SOUTH: [
+    clk_pad,                  # pad 0
+    rst_n_pad,                # pad 1
+
+    "bidir\\[0\\].pad",       # pad 2
     "bidir\\[1\\].pad",
     "bidir\\[2\\].pad",
     "bidir\\[3\\].pad",
     "bidir\\[4\\].pad",
-    "bidir\\[5\\].pad",
+    "bidir\\[5\\].pad",       # pad 7
 
-    "dvss_pads\\[0\\].pad",
+    "dvss_pads\\[0\\].pad",   # MUST remain at pad 8
 
-    "bidir\\[6\\].pad",
+    "bidir\\[6\\].pad",       # pad 9
     "bidir\\[7\\].pad",
     "bidir\\[8\\].pad",
     "bidir\\[9\\].pad",
     "bidir\\[10\\].pad",
     "bidir\\[11\\].pad",
     "bidir\\[12\\].pad",
-    "bidir\\[13\\].pad"
+    "bidir\\[13\\].pad"       # pad 16
 ]
 
+# Pads from 17 to 36 - RIGHT column, numbered from BOTTOM to TOP. See the chip diagram above.
 PAD_EAST: [
-    "dvdd_pads\\[0\\].pad",
-    "dvss_pads\\[1\\].pad",
+    "dvdd_pads\\[0\\].pad",   # MUST remain at pad 17
+    "dvss_pads\\[1\\].pad",   # MUST remain at pad 18
 
-    "bidir\\[14\\].pad",
+    "bidir\\[14\\].pad",      # pad 19
     "bidir\\[15\\].pad",
     "bidir\\[16\\].pad",
     "bidir\\[17\\].pad",
     "bidir\\[18\\].pad",
-    "bidir\\[19\\].pad",
+    "bidir\\[19\\].pad",      # pad 24
     
-    "dvdd_pads\\[1\\].pad",
-    "dvss_pads\\[2\\].pad",
+    "dvdd_pads\\[1\\].pad",   # MUST remain at pad 25
+    "dvss_pads\\[2\\].pad",   # MUST remain at pad 26
 
-    
-    "bidir\\[20\\].pad",
+    "bidir\\[20\\].pad",      # pad 27
     "bidir\\[21\\].pad",
     "bidir\\[22\\].pad",
     "bidir\\[23\\].pad",
     "bidir\\[24\\].pad",
-    "bidir\\[25\\].pad",
+    "bidir\\[25\\].pad",      # pad 32
     
-    "dvss_pads\\[3\\].pad",
-    "dvdd_pads\\[2\\].pad",
-    "dvss_pads\\[4\\].pad",
-    "dvdd_pads\\[3\\].pad",
+    "dvss_pads\\[3\\].pad",   # MUST remain at pad 33
+    "dvdd_pads\\[2\\].pad",   # MUST remain at pad 34
+    "dvss_pads\\[4\\].pad",   # MUST remain at pad 35
+    "dvdd_pads\\[3\\].pad",   # MUST remain at pad 36
 ]
 
+# Pads from 37 to 53 - TOP row, numbered from RIGHT to LEFT. See the chip diagram above.
 PAD_NORTH: [
-    "analog\\[1\\].pad",
-    "analog\\[0\\].pad",
-    "bidir\\[39\\].pad",
-    "bidir\\[38\\].pad",
-    "bidir\\[37\\].pad",
-    "bidir\\[36\\].pad",
-    "bidir\\[35\\].pad",
-    "bidir\\[34\\].pad",
+    "analog\\[1\\].pad",      # pad 53
+    "analog\\[0\\].pad",      # pad 52
+    "bidir\\[39\\].pad",      # pad 51
+    "bidir\\[38\\].pad",      # pad 50
+    "bidir\\[37\\].pad",      # pad 49
+    "bidir\\[36\\].pad",      # pad 48
+    "bidir\\[35\\].pad",      # pad 47
+    "bidir\\[34\\].pad",      # pad 46
 
-    "dvss_pads\\[5\\].pad",
+    "dvss_pads\\[5\\].pad",   # MUST remain at pad 45
 
-    "bidir\\[33\\].pad",
-    "bidir\\[32\\].pad",
-    "bidir\\[31\\].pad",
-    "bidir\\[30\\].pad",
-    "bidir\\[29\\].pad",
-    "bidir\\[28\\].pad",
-    "bidir\\[27\\].pad",
-    "bidir\\[26\\].pad"
+    "bidir\\[33\\].pad",      # pad 44
+    "bidir\\[32\\].pad",      # pad 43
+    "bidir\\[31\\].pad",      # pad 42
+    "bidir\\[30\\].pad",      # pad 41
+    "bidir\\[29\\].pad",      # pad 40
+    "bidir\\[28\\].pad",      # pad 39
+    "bidir\\[27\\].pad",      # pad 38
+    "bidir\\[26\\].pad"       # pad 37
 ]
 
-
+# Pads from 54 to 73 - LEFT column, numbered from BOTTOM to TOP. See the chip diagram above.
 PAD_WEST: [
-    "dvdd_pads\\[7\\].pad",
-    "dvss_pads\\[9\\].pad",
-    "dvdd_pads\\[6\\].pad",
-    "dvss_pads\\[8\\].pad",
+    "dvdd_pads\\[7\\].pad",   # MUST remain at pad 73
+    "dvss_pads\\[9\\].pad",   # MUST remain at pad 72
+    "dvdd_pads\\[6\\].pad",   # MUST remain at pad 71
+    "dvss_pads\\[8\\].pad",   # MUST remain at pad 70
 
-    "inputs\\[11\\].pad",
-    "inputs\\[10\\].pad",
-    "inputs\\[9\\].pad",
-    "inputs\\[8\\].pad",
-    "inputs\\[7\\].pad",
-    "inputs\\[6\\].pad",
+    "inputs\\[11\\].pad",     # pad 69
+    "inputs\\[10\\].pad",     # pad 68
+    "inputs\\[9\\].pad",      # pad 67
+    "inputs\\[8\\].pad",      # pad 66
+    "inputs\\[7\\].pad",      # pad 65
+    "inputs\\[6\\].pad",      # pad 64
 
-    "dvdd_pads\\[5\\].pad",
-    "dvss_pads\\[7\\].pad",
+    "dvdd_pads\\[5\\].pad",   # MUST remain at pad 63
+    "dvss_pads\\[7\\].pad",   # MUST remain at pad 62
 
-    "inputs\\[5\\].pad",
-    "inputs\\[4\\].pad",
-    "inputs\\[3\\].pad",
-    "inputs\\[2\\].pad",
+    "inputs\\[5\\].pad",      # pad 61
+    "inputs\\[4\\].pad",      # pad 60
+    "inputs\\[3\\].pad",      # pad 59
+    "inputs\\[2\\].pad",      # pad 58
 
-    "dvdd_pads\\[4\\].pad",
-    "dvss_pads\\[6\\].pad",
+    "dvdd_pads\\[4\\].pad",   # MUST remain at pad 57
+    "dvss_pads\\[6\\].pad",   # MUST remain at pad 56
     
-    "inputs\\[1\\].pad",
-    "inputs\\[0\\].pad"
+    "inputs\\[1\\].pad",      # pad 55
+    "inputs\\[0\\].pad"       # pad 54
 ]
 
 # SDC files
