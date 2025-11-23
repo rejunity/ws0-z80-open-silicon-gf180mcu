@@ -8,10 +8,10 @@ module chip_top #(
     parameter NUM_DVDD_PADS = 8,
     parameter NUM_DVSS_PADS = 10,
 
-    // Signal pads
-    parameter NUM_INPUT_PADS = 12, // only 4 necessary for the chip
-    parameter NUM_BIDIR_PADS = 40, // 8 bidir, 24 output
-    parameter NUM_ANALOG_PADS = 2  // @TODO: rename analog pads
+    // Signal pads, 54 in total
+    parameter NUM_INPUT_PADS = 12, // only 4 necessary for Z80, 5 for configuration and the rest are unused
+    parameter NUM_BIDIR_PADS = 42, // 8 bidir data + 24 output for Z80, the rest are unused
+    parameter NUM_ANALOG_PADS = 0  // dummy, no analog pads
     )(
     `ifdef USE_POWER_PINS
     inout  wire VDD,

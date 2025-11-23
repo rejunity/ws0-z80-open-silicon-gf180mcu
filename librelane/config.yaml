@@ -51,9 +51,9 @@ PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 #                  53| 51| 49| 47| 45| 43| 41| 39| 37
 #                  | | | | | | | | | | | | | | | | |
 #           ,------v-v-v-v-v-v-v-v---v-v-v-v-v-v-v-v-------.
-#           |      a a b b b b b b G b b b b b b b b       |
-#     54 -->|i_0   1 0 3 3 3 3 3 3 N 3 3 3 3 2 2 2 2   VDD |+-- 36
-#     55 -->|i_1       9 8 7 6 5 4 D 3 2 1 0 9 8 7 6   GND |--- 35
+#           |      b b b b b b b b G b b b b b b b b       |
+#     54 -->|i_0   4 4 3 3 3 3 3 3 N 3 3 3 3 2 2 2 2   VDD |+-- 36
+#     55 -->|i_1   1 0 9 8 7 6 5 4 D 3 2 1 0 9 8 7 6   GND |--- 35
 #     56 ---|GND                                       VDD |+-- 34
 #     57 --+|VDD                                       GND |--- 33
 #     58 -->|i_2                                       b_25|<-> 32
@@ -132,8 +132,8 @@ PAD_EAST: [
 
 # Pads from 37 to 53 - TOP row, numbered from RIGHT to LEFT. See the chip diagram above.
 PAD_NORTH: [
-    "analog\\[1\\].pad",      # pad 53
-    "analog\\[0\\].pad",      # pad 52
+    "bidir\\[41\\].pad",      # pad 53
+    "bidir\\[40\\].pad",      # pad 52
     "bidir\\[39\\].pad",      # pad 51
     "bidir\\[38\\].pad",      # pad 50
     "bidir\\[37\\].pad",      # pad 49
