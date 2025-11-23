@@ -7,8 +7,7 @@
 
 module chip_core #(
     parameter NUM_INPUT_PADS,
-    parameter NUM_BIDIR_PADS,
-    parameter NUM_ANALOG_PADS
+    parameter NUM_BIDIR_PADS
     )(
     `ifdef USE_POWER_PINS
     inout  wire VDD,
@@ -29,9 +28,7 @@ module chip_core #(
     output wire [NUM_BIDIR_PADS-1:0] bidir_sl,   // Slew rate (0=fast, 1=slow)
     output wire [NUM_BIDIR_PADS-1:0] bidir_ie,   // Input enable
     output wire [NUM_BIDIR_PADS-1:0] bidir_pu,   // Pull-up
-    output wire [NUM_BIDIR_PADS-1:0] bidir_pd,   // Pull-down
-
-    inout  wire [NUM_ANALOG_PADS-1:0] analog     // Analog
+    output wire [NUM_BIDIR_PADS-1:0] bidir_pd    // Pull-down
 );
 
     // See here for usage: https://gf180mcu-pdk.readthedocs.io/en/latest/IPs/IO/gf180mcu_fd_io/digital.html

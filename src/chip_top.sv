@@ -3,6 +3,7 @@
 
 `default_nettype none
 
+
 module chip_top #(
     // Power/ground pads for core and I/O
     parameter NUM_DVDD_PADS = 8,
@@ -10,8 +11,7 @@ module chip_top #(
 
     // Signal pads, 54 in total
     parameter NUM_INPUT_PADS = 12, // only 4 necessary for Z80, 5 for configuration and the rest are unused
-    parameter NUM_BIDIR_PADS = 42, // 8 bidir data + 24 output for Z80, the rest are unused
-    parameter NUM_ANALOG_PADS = 0  // dummy, no analog pads
+    parameter NUM_BIDIR_PADS = 42 // 8 bidir data + 24 output for Z80, the rest are unused
     )(
     `ifdef USE_POWER_PINS
     inout  wire VDD,
@@ -22,9 +22,7 @@ module chip_top #(
     inout  wire rst_n_PAD,
     
     inout  wire [NUM_INPUT_PADS-1:0] input_PAD,
-    inout  wire [NUM_BIDIR_PADS-1:0] bidir_PAD,
-    
-    inout  wire [NUM_ANALOG_PADS-1:0] analog_PAD
+    inout  wire [NUM_BIDIR_PADS-1:0] bidir_PAD
 );
 
     wire clk_PAD2CORE;
@@ -148,27 +146,11 @@ module chip_top #(
     end
     endgenerate
 
-    generate
-    for (genvar i=0; i<NUM_ANALOG_PADS; i++) begin : analog
-        (* keep *)
-        gf180mcu_fd_io__asig_5p0 pad (
-            `ifdef USE_POWER_PINS
-            .DVDD   (VDD),
-            .DVSS   (VSS),
-            .VDD    (VDD),
-            .VSS    (VSS),
-            `endif
-            .ASIG5V (analog_PAD[i])
-        );
-    end
-    endgenerate
-
     // Core design
 
     chip_core #(
         .NUM_INPUT_PADS  (NUM_INPUT_PADS),
-        .NUM_BIDIR_PADS  (NUM_BIDIR_PADS),
-        .NUM_ANALOG_PADS (NUM_ANALOG_PADS)
+        .NUM_BIDIR_PADS  (NUM_BIDIR_PADS)
     ) i_chip_core (
         `ifdef USE_POWER_PINS
         .VDD        (VDD),
@@ -189,9 +171,7 @@ module chip_top #(
         .bidir_sl   (bidir_CORE2PAD_SL),
         .bidir_ie   (bidir_CORE2PAD_IE),
         .bidir_pu   (bidir_CORE2PAD_PU),
-        .bidir_pd   (bidir_CORE2PAD_PD),
-        
-        .analog     (analog_PAD)
+        .bidir_pd   (bidir_CORE2PAD_PD)
     );
     
     // Chip ID - do not remove, necessary for tapeout
