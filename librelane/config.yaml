@@ -42,8 +42,8 @@ VERILOG_FILES:
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
 
 
-# Mapping of the chip_core signals to padring pads:
-# - 54 pads are for internal signals,
+# Mapping of the chip_core signals to padring's 74 pads:
+# - 56 pads are for internal signals (incl. clock & reset),
 # - 18 pins are dedicated to power supply and their locations CAN NOT be changed!
 #
 # Layout here matches orientation of the GDSII. Pads are numbered counter-clockwise.
