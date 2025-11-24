@@ -275,9 +275,17 @@ CORE_AREA: [442, 442, 3490, 4680]
 PL_TARGET_DENSITY_PCT: 35
 GRT_ALLOW_CONGESTION: true
 
+# Z80 project specific FIXES --------------------------------------------------
 # Fix antenna violations after DRT
-DRT_ANTENNA_REPAIR_ITERS: 10
+DRT_ANTENNA_REPAIR_ITERS: 10 # default 0
 DRT_ANTENNA_MARGIN: 10 # %
+
+# Fix HOLD violations (only happens when running librelane on MacOS)
+PL_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.1
+GRT_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.05
+GLB_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.1
+PL_RESIZER_HOLD_MAX_BUFFER_PCT: 100 # default 50
+# -----------------------------------------------------------------------------
 
 # PDN - Straps
 PDN_VWIDTH: 5
