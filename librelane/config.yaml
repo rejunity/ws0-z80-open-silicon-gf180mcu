@@ -279,8 +279,8 @@ DRT_ANTENNA_REPAIR_ITERS: 10 # default 0
 DRT_ANTENNA_MARGIN: 10 # %
 
 # Fix HOLD violations (only happens when running librelane on MacOS)
-PL_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.1
-GRT_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.05
+PL_RESIZER_HOLD_SLACK_MARGIN: 0.3 # default 0.1
+GRT_RESIZER_HOLD_SLACK_MARGIN: 0.3 # default 0.05
 # (deprecated, use GRT_ instead) GLB_RESIZER_HOLD_SLACK_MARGIN: 0.2 # default 0.1
 PL_RESIZER_HOLD_MAX_BUFFER_PCT: 100 # default 50
 GRT_RESIZER_HOLD_MAX_BUFFER_PCT: 100 # default 50
