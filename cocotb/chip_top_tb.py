@@ -24,11 +24,11 @@ Z80_FREQ = 4 # in MHz
 
 async def set_defaults(dut):
     dut.input_PAD.value = 0
-    dut.bidir_PAD.value = LogicArray('Z' * 32 + '0' * 8)
+    dut.bidir_PAD.value = LogicArray('Z' * 24 + '0' * 8)
 
 async def set_inputs(dut, ctrl_in, data_in):
     dut.input_PAD.value = ctrl_in
-    dut.bidir_PAD.value = LogicArray('Z' * 32 + f"{data_in:08b}")
+    dut.bidir_PAD.value = LogicArray('Z' * 24 + f"{data_in:08b}")
 
 async def enable_power(dut):
     dut.VDD.value = 1
