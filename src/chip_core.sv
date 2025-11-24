@@ -7,8 +7,7 @@
 
 module chip_core #(
     parameter NUM_INPUT_PADS,
-    parameter NUM_BIDIR_PADS,
-    parameter NUM_ANALOG_PADS
+    parameter NUM_BIDIR_PADS
     )(
     `ifdef USE_POWER_PINS
     inout  wire VDD,
@@ -29,9 +28,7 @@ module chip_core #(
     output wire [NUM_BIDIR_PADS-1:0] bidir_sl,   // Slew rate (0=fast, 1=slow)
     output wire [NUM_BIDIR_PADS-1:0] bidir_ie,   // Input enable
     output wire [NUM_BIDIR_PADS-1:0] bidir_pu,   // Pull-up
-    output wire [NUM_BIDIR_PADS-1:0] bidir_pd,   // Pull-down
-
-    inout  wire [NUM_ANALOG_PADS-1:0] analog     // Analog
+    output wire [NUM_BIDIR_PADS-1:0] bidir_pd    // Pull-down
 );
 
     // See here for usage: https://gf180mcu-pdk.readthedocs.io/en/latest/IPs/IO/gf180mcu_fd_io/digital.html
@@ -67,8 +64,8 @@ module chip_core #(
                                 = {8{1'b1}};    // 1 = Output
 
     // set the rest of bidir as output and drive them low
-    assign bidir_oe[NUM_BIDIR_PADS-1:32] = '1;
-    assign bidir_out[NUM_BIDIR_PADS-1:32] = '0;
+    // assign bidir_oe[NUM_BIDIR_PADS-1:32] = '1;
+    // assign bidir_out[NUM_BIDIR_PADS-1:32] = '0;
 
     // @TODO: investigate original Z80 if pull-down/pull-up should be attached to the inputs
     // input pull-downs off
