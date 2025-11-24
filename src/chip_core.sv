@@ -64,8 +64,8 @@ module chip_core #(
                                 = {8{1'b1}};    // 1 = Output
 
     // set the rest of bidir as output and drive them low
-    assign bidir_oe[NUM_BIDIR_PADS-1:32] = '1;
-    assign bidir_out[NUM_BIDIR_PADS-1:32] = '0;
+    // assign bidir_oe[NUM_BIDIR_PADS-1:32] = '1;
+    // assign bidir_out[NUM_BIDIR_PADS-1:32] = '0;
 
     // @TODO: investigate original Z80 if pull-down/pull-up should be attached to the inputs
     // input pull-downs off
