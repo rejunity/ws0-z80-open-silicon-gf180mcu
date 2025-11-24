@@ -125,11 +125,9 @@ async def test__LD_HL2121(dut):
 async def z80_step(z80, ctrl_in, data_in, cycle, verbose=False):
     await set_inputs(z80, ctrl_in, data_in)
     await ClockCycles(z80.clk_PAD, 1)
-    print(z80.bidir_PAD.value)
     data = z80.bidir_PAD.value[7:0]
     addr = z80.bidir_PAD.value[23:8].to_unsigned()
     ctrl = z80.bidir_PAD.value[31:24].to_unsigned()
-    # print(ctrl)
 
     ctrl = [int(not bit(ctrl, n)) for n in range(8)]
     ctrl = dict(zip(['m1', 'mreq', 'ioreq', 'rd', 'wr', 'rfsh', 'halt', 'busak'], ctrl))
