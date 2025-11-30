@@ -5,90 +5,166 @@ CORE_AREA: [442, 442, 1494, 2089]
 
 VERILOG_DEFINES: ["SLOT_0P5X0P5"]
 
-# Specify the pad instances for the padring
+# Mapping of the chip_core signals to padring's 74 pads:
+# - 56 pads are for internal signals (incl. clock & reset),
+# - 18 pins are dedicated to power supply and their locations CAN NOT be changed!
+#
+# Layout here matches orientation of the GDSII. Pads are numbered counter-clockwise.
+# Note that the actual orientation chip on PCB might be different.
+#
+#                      37  35  33  31  29
+#                    38| 36| 34| 32| 30| 28
+#                    | | | | | | | | | | |
+#           ,--------v-v---+-v-v-v-v-V-v-v--------.
+#           |        a a G V a a b b b b b        |
+#     39 <->|        3 2 N D 1 0 2 2 2 2 2     GND|--- 27
+#     40 <->|            D D     6 5 4 3 2     VDD|+-- 26
+#     41 --+|VDD                              b_21|<-> 25
+#     42 ---|GND                              b_20|<-> 24
+#     43 <->|                                 b_19|<-> 23
+#     44 <->|                                 b_18|<-> 22
+#     45 <->|                  |              b_17|<-> 21
+#     46 <->|                WAFER            b_16|<-> 20
+#     47 <->|               -SPACE-           b_15|<-> 19
+#     48 <->|                GF180            b_14|<-> 18
+#     49 <->|                  |              b_13|<-> 17
+#     50 <->|                                 b_12|<-> 16
+#     51 <->|                                 b_11|<-> 15
+#     52 <->|                                 b_10|<-> 14
+#     53 <->|                                 b_9 |<-> 13
+#     54 <->|        c r G V b b b b b b b    b_8 |<-> 12
+#     55 <->|        l s N D 0 1 2 3 4 5 6    b_7 |<-> 11
+#           |        k t D D                      |
+#           `--------^-^---+-^-^-^-^-^-^-^--------'
+#                    | | | | | | | | | | | 
+#                    0 | 2 | 4 | 6 | 8 | 10
+#                      1   3   5   7   9   
+
+
+# Z80 pin to wafer.space pad mapping keeping in mind ceramic package:
+#                      37  35  33  31  29
+#                    38| 36| 34| 32| 30  28
+#                    | | | | | | | |     |         
+#           ,--------v-v---+-v-v-v-v-----V--------.
+#           |        D D g V D D D D     C        |
+#     39 <->|D0      7 2   D                     g|--- 27
+#     40 <->|D1            D                     v|+-- 26
+#     41 --+|v             +                   A15|--> 25
+#     42 ---|g             +                   A14|--> 24
+#     43 -->|INT           +5V Z80             A13|--> 23
+#     44 -->|NMI                               A12|--> 22
+#     45 <->|HALT              |                  |    21
+#     46 <->|MREQ            WAFER                |    20
+#     47 <->|IORQ           -SPACE-               |    19
+#     48 <->|RD              GF180                |    18
+#     49 <->|WR                |               A11|--> 17
+#     50 <--|BUSAK                             A10|--> 16
+#     51 -->|WAIT        ,-GND Z80             A9 |--> 15
+#     52    |            |                     A8 |--> 14
+#     53    |          R |                     A7 |--> 13
+#     54 -->|BUSRQ     F G                     A6 |--> 12
+#     55 -->|RESET   M S N       A A A A A     A5 |--> 11
+#           |        1 H D v     0 1 2 3 4        |
+#           `--------v-v---+-----v-v-v-v-v--------'
+#                    | | | |     | | | | | 
+#                    0 | 2 | 4   6 | 8 | 10
+#                      1   3   5   7   9   
+
+
+# .wait_n  (input_in[0]),
+# .int_n   (input_in[1]),
+# .nmi_n   (input_in[2]),
+# .busrq_n (input_in[3]),
+# .halt_n  (bidir_out[24 + 6]), 30
+# .busak_n (bidir_out[24 + 7]), 31
+# .m1_n    (bidir_out[24 + 0]), 24
+# .mreq_n  (bidir_out[24 + 1]), 25
+# .iorq_n  (bidir_out[24 + 2]), 26
+# .rd_n    (bidir_out[24 + 3]), 27
+# .wr_n    (bidir_out[24 + 4]), 28 
+# .rfsh_n  (bidir_out[24 + 5]), 29
+
+# unused inputs start from 5 (5,6,7,8,9 are used for configuration) .. 13
+# 14 + 1reset = 15 input pads in total
+
+
+# Pads from 0 to 10 - BOTTOM row, numbered from LEFT to RIGHT. See the chip diagram above.
 PAD_SOUTH: [
-    clk_pad,
-    rst_n_pad,
-
-    "dvss_pads\\[0\\].pad",
-    "dvdd_pads\\[0\\].pad",
-
-    "bidir\\[0\\].pad",
-    "bidir\\[1\\].pad",
-    "bidir\\[2\\].pad",
-    "bidir\\[3\\].pad",
-    "bidir\\[4\\].pad",
-    "bidir\\[5\\].pad",
-    "bidir\\[6\\].pad"
-
+    "bidir\\[24\\].pad",      # pad 0       M1 <-- Z80
+    "bidir\\[29\\].pad",      # pad 1     RFSH <-- Z80
+    "dvss_pads\\[0\\].pad",   # MUST remain at pad 2 
+    "dvdd_pads\\[0\\].pad",   # MUST remain at pad 3
+    "inputs\\[4\\].pad",      # pad 4     -- unused --
+    "inputs\\[5\\].pad",      # pad 5     -- unused --
+    "bidir\\[8\\].pad",       # pad 6       A0 <-- Z80
+    "bidir\\[9\\].pad",       # pad 7       A1 <-- Z80
+    "bidir\\[10\\].pad",      # pad 8       A2 <-- Z80
+    "bidir\\[11\\].pad",      # pad 9       A3 <-- Z80
+    "bidir\\[12\\].pad",      # pad 10      A4 <-- Z80 (A5 is pad 11 on the EAST side)
 ]
 
+# Pads from 11 to 27 - RIGHT column, numbered from BOTTOM to TOP. See the chip diagram above.
 PAD_EAST: [
 
-    "bidir\\[7\\].pad",
-    "bidir\\[8\\].pad",
-    "bidir\\[9\\].pad",
-    "bidir\\[10\\].pad",
-    "bidir\\[11\\].pad",
-    "bidir\\[12\\].pad",
-    "bidir\\[13\\].pad",
+    "bidir\\[13\\].pad",      # pad 11      A5 <-- Z80 (A4 is pad 10 on the SOUTH side)
     "bidir\\[14\\].pad",
     "bidir\\[15\\].pad",
     "bidir\\[16\\].pad",
     "bidir\\[17\\].pad",
     "bidir\\[18\\].pad",
-    "bidir\\[19\\].pad",
-    "bidir\\[20\\].pad",
+    "bidir\\[19\\].pad",      # pad 17     A11 <-- Z80
+    "inputs\\[6\\].pad",      # pad 18    -- unused --
+    "inputs\\[7\\].pad",      # pad 19    -- unused --
+    "inputs\\[8\\].pad",      # pad 20    -- unused --
+    "inputs\\[9\\].pad",      # pad 21    -- unused --
+    "bidir\\[20\\].pad",      # pad 22     A12 <-- Z80
     "bidir\\[21\\].pad",
+    "bidir\\[22\\].pad",
+    "bidir\\[23\\].pad",      # pad 25     A15 <-- Z80
             
-            
-    "dvss_pads\\[1\\].pad",
-    "dvdd_pads\\[1\\].pad"
+    "dvss_pads\\[1\\].pad",   # MUST remain at pad 26
+    "dvdd_pads\\[1\\].pad"    # MUST remain at pad 27
 ]
 
+# Pads from 28 to 38 - TOP row, numbered from LEFT to RIGHT. See the chip diagram above.
 PAD_NORTH: [
-    "analog\\[3\\].pad",
-    "analog\\[2\\].pad",
+    "bidir\\[7\\].pad",       # pad 38     D7  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[2\\].pad",       # pad 37     D2  <-> Z80 (note that Z80 order of data-bus is non sequential)
 
-    "dvss_pads\\[2\\].pad",
-    "dvdd_pads\\[2\\].pad",
+    "dvss_pads\\[2\\].pad",   # MUST remain at pad 36
+    "dvdd_pads\\[2\\].pad",   # MUST remain at pad 35
 
-    "analog\\[1\\].pad",
-    "analog\\[0\\].pad",
-    
+    "bidir\\[6\\].pad",       # pad 34     D6  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[5\\].pad",       # pad 33     D5  <-> Z80 (note that Z80 order of data-bus is non sequential)        
+    "bidir\\[3\\].pad",       # pad 32     D3  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[4\\].pad",       # pad 31     D4  <-> Z80 (note that Z80 order of data-bus is non sequential)    
 
-    "bidir\\[26\\].pad",
-    "bidir\\[25\\].pad",
-    "bidir\\[24\\].pad",
-    "bidir\\[23\\].pad",
-    "bidir\\[22\\].pad"
+    "inputs\\[10\\].pad",     # pad 30   -- unused --
+    "inputs\\[11\\].pad",     # pad 29   -- unused --
 
-
+    clk_pad,                  # pad 28
 ]
 
-
+# Pads from 39 to 55 - LEFT column, numbered from BOTTOM to TOP. See the chip diagram above.
 PAD_WEST: [
+    rst_n_pad,                # pad 55   RESET --> Z80
+    "inputs\\[3\\].pad",      # pad 54   BUSRQ --> Z80
+    "inputs\\[12\\].pad",     # pad 53    -- unused --
+    "inputs\\[13\\].pad",     # pad 52    -- unused --
+    "inputs\\[0\\].pad",      # pad 51    WAIT --> Z80
+    "bidir\\[31\\].pad",      # pad 50   BUSAK <-- Z80
+    "bidir\\[28\\].pad",      # pad 49      WR <-- Z80
+    "bidir\\[27\\].pad",      # pad 48      RD <-- Z80
+    "bidir\\[26\\].pad",      # pad 47    IORQ <-- Z80
+    "bidir\\[25\\].pad",      # pad 46    MREQ <-- Z80
+    "bidir\\[30\\].pad",      # pad 45    HALT <-- Z80
 
-
-    "bidir\\[37\\].pad",
-    "bidir\\[36\\].pad",
-    "bidir\\[35\\].pad",
-    "bidir\\[34\\].pad",
-    "bidir\\[33\\].pad",
-    "bidir\\[32\\].pad",
-    "bidir\\[31\\].pad",
-    "bidir\\[30\\].pad",
-    "bidir\\[29\\].pad",
-    "bidir\\[28\\].pad",
-    "bidir\\[27\\].pad",
-
-
-    "inputs\\[3\\].pad",
-    "inputs\\[2\\].pad",
+    "inputs\\[2\\].pad",      # pad 44     NMI --> Z80
+    "inputs\\[1\\].pad",      # pad 43     INT --> Z80
     
-    "dvss_pads\\[3\\].pad",
-    "dvdd_pads\\[3\\].pad",
+    "dvss_pads\\[3\\].pad",   # MUST remain at pad 42
+    "dvdd_pads\\[3\\].pad",   # MUST remain at pad 41
     
-    "inputs\\[1\\].pad",
-    "inputs\\[0\\].pad"
+    "bidir\\[1\\].pad",       # pad 40     D1  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[0\\].pad",       # pad 39     D0  <-> Z80 (TODO: need to move this to the NORTH side!!!)
 ]

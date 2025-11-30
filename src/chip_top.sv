@@ -3,18 +3,12 @@
 
 `default_nettype none
 
-//`include "slot_defines.svh"
-//
-//module chip_top #(
-//    // Power/ground pads for core and I/O
-//    parameter NUM_DVDD_PADS = `NUM_DVDD_PADS,
-//    parameter NUM_DVSS_PADS = `NUM_DVSS_PADS,
-//    // Signal pads
-//    parameter NUM_INPUT_PADS = `NUM_INPUT_PADS,
-//    parameter NUM_BIDIR_PADS = `NUM_BIDIR_PADS
+// Z80 is not using `include "slot_defines.svh"
+// instead SLOT_1X1 and SLOT_0P5X0P5 options are configured below in the module definition
+// SLOT_0P5X1 and SLOT_1X0P5 are not supported!
 
 
-// Wafer space padring
+// Wafer space padring for SLOT_1X1 (74 pads in total)
 // - 56 pads are for internal signals,
 // - 18 pins are dedicated to power supply and their locations CAN NOT be changed!
 //
@@ -117,13 +111,26 @@
 //                  v | 2 | 4 | 6   8   10| 12| 14| 16
 //                  0 1   3   5   7   9   11  13  15
 
-// out of 56 pads:
+// out of 56 signal pads:
 // - 1 clock (Schmitt trigger)
 // - 8+24 bidir
 // - 5 input 
 // - 18 unused (forced to input)
 
+
+// Wafer space padring for SLOT_0P5X0P5 (56 pads in total)
+// - 48 pads are for internal signals,
+// -  8 pins are dedicated to power supply and their locations CAN NOT be changed!
+
+// out of 48 signal pads:
+// - 1 clock (Schmitt trigger)
+// - 8+24 bidir
+// - 5 input 
+// - 10 unused (forced to input)
+
+
 module chip_top #(
+    `ifdef SLOT_1X1
     // Power/ground pads for core and I/O
     parameter NUM_DVDD_PADS = 8,        // MUST remain unchanged, 8 power pads
     parameter NUM_DVSS_PADS = 10,       // MUST remain unchanged, 10 ground pads
@@ -131,11 +138,30 @@ module chip_top #(
     // Signal pads, 54 (+clock+reset) in total
     parameter NUM_INPUT_PADS = 4+18,    // only 4 necessary for Z80: INT, NMI, WAIT, BUSRQ (not counting clock & reset here)
                                         //      5 for chip configuration
-                                        // and the rest (74-8-10-4-8-16-8-2=18) are unused
+                                        // and the rest (74-8-10-4-?-8-16-8-2=18) are unused
                                         // unused pins are implemented as input IO cells
     parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +
                                         //  16 address bus (output) +
                                         //  8 signals (output)
+    `endif
+
+    `ifdef SLOT_0P5X0P5
+    // Power/ground pads for core and I/O
+    parameter NUM_DVDD_PADS = 4,        // MUST remain unchanged, 4 power pads
+    parameter NUM_DVSS_PADS = 4,        // MUST remain unchanged, 4 ground pads
+
+
+    // Signal pads, 46 (+clock+reset) in total
+    parameter NUM_INPUT_PADS = 4+10,    // only 4 necessary for Z80: INT, NMI, WAIT, BUSRQ (not counting clock & reset here)
+                                        //      5 for chip configuration
+                                        // and the rest (56-4-4-4-?-8-16-8-2=10) are unused
+                                        // unused pins are implemented as input IO cells
+    parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +
+                                        //  16 address bus (output) +
+                                        //  8 signals (output)
+
+    `endif
+
     )(
     `ifdef USE_POWER_PINS
     inout  wire VDD,
