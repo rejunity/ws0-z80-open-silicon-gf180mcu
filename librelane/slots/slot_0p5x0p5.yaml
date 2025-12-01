@@ -1,3 +1,5 @@
+STD_CELL_LIBRARY: "gf180mcu_fd_sc_mcu9t5v0"
+
 # Floorplanning
 FP_SIZING: absolute
 DIE_AREA: [0, 0, 1936, 2531]

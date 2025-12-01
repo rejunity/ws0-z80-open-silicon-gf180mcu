@@ -71,6 +71,8 @@ CLOCK_PORT: clk_PAD
 CLOCK_NET: clk_pad/Y
 CLOCK_PERIOD: 40 # 25 MHz
 
+# NOTE: due to potential bug, librelane pays attention to STD_CELL_LIBRARY passed in the first yaml file
+# As a quick workaround STD_CELL_LIBRARY is now also (duplicated) specified in slot_1x1.yaml and slot_0p5x0p5.yaml
 STD_CELL_LIBRARY: "gf180mcu_fd_sc_mcu9t5v0"
 
 # Fix hold violations
