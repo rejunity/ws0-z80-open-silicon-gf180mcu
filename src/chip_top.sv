@@ -118,6 +118,17 @@
 // - 18 unused (forced to input)
 
 
+// Wafer space padring for SLOT_0P5X1 (72 pads in total)
+// - 56 pads are for internal signals,
+// - 16 pins are dedicated to power supply and their locations CAN NOT be changed!
+
+// out of 56 signal pads:
+// - 1 clock (Schmitt trigger)
+// - 8+24 bidir
+// - 5 input 
+// - 18 unused (forced to input)
+
+
 // Wafer space padring for SLOT_0P5X0P5 (56 pads in total)
 // - 48 pads are for internal signals,
 // -  8 pins are dedicated to power supply and their locations CAN NOT be changed!
@@ -127,6 +138,7 @@
 // - 8+24 bidir
 // - 5 input 
 // - 10 unused (forced to input)
+
 
 
 module chip_top #(
@@ -143,6 +155,23 @@ module chip_top #(
     parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +
                                         //  16 address bus (output) +
                                         //  8 signals (output)
+    `endif
+
+    `ifdef SLOT_0P5X1
+    // Power/ground pads for core and I/O
+    parameter NUM_DVDD_PADS = 8,        // MUST remain unchanged, 8 power pads
+    parameter NUM_DVSS_PADS = 8,        // MUST remain unchanged, 8 ground pads
+
+
+    // Signal pads, 46 (+clock+reset) in total
+    parameter NUM_INPUT_PADS = 4+18,    // only 4 necessary for Z80: INT, NMI, WAIT, BUSRQ (not counting clock & reset here)
+                                        //      5 for chip configuration
+                                        // and the rest (72-8-8-4-?-8-16-8-2=18) are unused
+                                        // unused pins are implemented as input IO cells
+    parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +
+                                        //  16 address bus (output) +
+                                        //  8 signals (output)
+
     `endif
 
     `ifdef SLOT_0P5X0P5

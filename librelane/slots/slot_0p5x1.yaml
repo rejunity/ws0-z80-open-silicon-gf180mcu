@@ -1,3 +1,5 @@
+STD_CELL_LIBRARY: "gf180mcu_fd_sc_mcu9t5v0"
+
 # Floorplanning
 FP_SIZING: absolute
 DIE_AREA: [0, 0, 1936, 5122]
@@ -5,105 +7,153 @@ CORE_AREA: [442, 442, 1494, 4680]
 
 VERILOG_DEFINES: ["SLOT_0P5X1"]
 
+
+# Mapping of the chip_core signals to padring's 74 pads:
+# - 56 pads are for internal signals (incl. clock & reset),
+# - 18 pins are dedicated to power supply and their locations CAN NOT be changed!
+#
+# Layout here matches orientation of the GDSII. Pads are numbered counter-clockwise.
+# Note that the actual orientation chip on PCB might be different.
+#
+#                      |   |   |   | 
+#                    | | | | | | | | 
+#           ,--------v-v-V---+-v-v-v--------.
+#           |        D D D g V D D D        |
+#           |        0 7 2   D              |
+#           |                D              |
+#        <->|D1                           D4|<->
+#        -->|INT                         CLK|<==
+#        --+|                               |+-
+#        ---|                               |--
+#        -->|NMI                         A15|-->
+#        <--|HALT                        A14|-->
+#        <--|MREQ                        A13|-->
+#           |                            A12|-->
+#           |                            A11|-->
+#           |                               |
+#           |               |               |
+#           |             WAFER             | 
+#           |            -SPACE-            | 
+#        --+|             GF180             |+-- 
+#        ---|               |               |---
+#           |                               | 
+#           |                               | 
+#           |                               | 
+#           |                            A10|--> 
+#           |                            A9 |--> 
+#        <--|IORQ                        A8 |--> 
+#        <--|RD                          A7 |--> 
+#        <--|WR                          A6 |--> 
+#        --+|                            A5 |--> 
+#        ---|        R                      |+-- 
+#        <--|BUSAK   E   R                  |---
+#        -->|WAIT    S   F G             A4 |--> 
+#        -->|BUSRQ   E M S N   A A A     A3 |-->
+#           |        T 1 H D   0 1 2        |
+#           `--------^-v-v---+-v-v-v--------'
+#                    | | | | | | | | 
+#                    0 | 2 | 4 | 6 | 
+#                      1   3   5   7 
+
 # Specify the pad instances for the padring
 PAD_SOUTH: [
-    clk_pad,
-    rst_n_pad,
-    "inputs\\[0\\].pad",
+    rst_n_pad,                # pad     RESET --> Z80
+    "bidir\\[24\\].pad",      # pad        M1 <-- Z80
+    "bidir\\[29\\].pad",      # pad      RFSH <-- Z80
 
-    "dvss_pads\\[0\\].pad",
+    "dvss_pads\\[0\\].pad",   # GND
     "dvdd_pads\\[0\\].pad",
     
-    "inputs\\[1\\].pad",
-    "inputs\\[2\\].pad",
-    "inputs\\[3\\].pad"
+    "bidir\\[8\\].pad",       # pad        A0 <-- Z80
+    "bidir\\[9\\].pad",       # pad        A1 <-- Z80
+    "bidir\\[10\\].pad"       # pad        A2 <-- Z80
 ]
 
 PAD_EAST: [
 
-    "bidir\\[0\\].pad",
-    "bidir\\[1\\].pad",
+    "bidir\\[11\\].pad",      # pad        A3 <-- Z80
+    "bidir\\[12\\].pad",      # pad        A4 <-- Z80 (A5 is pad 11 on the EAST side)
     
     "dvss_pads\\[1\\].pad",
     "dvdd_pads\\[1\\].pad",
     
-    "bidir\\[2\\].pad",
-    "bidir\\[3\\].pad",
-    "bidir\\[4\\].pad",
-    "bidir\\[5\\].pad",
-    "bidir\\[6\\].pad",
-    "bidir\\[7\\].pad",
-    "bidir\\[8\\].pad",
-    "bidir\\[9\\].pad",
-    "bidir\\[10\\].pad",
+    "bidir\\[13\\].pad",      # pad        A5 <-- Z80 (A4 is pad 10 on the SOUTH side)
+    "bidir\\[14\\].pad",
+    "bidir\\[15\\].pad",
+    "bidir\\[16\\].pad",
+    "bidir\\[17\\].pad",      # pad        A9 <-- Z80
+    "bidir\\[18\\].pad",      # pad       A10 <-- Z80
+    "inputs\\[4\\].pad",      # pad      -- unused --
+    "inputs\\[5\\].pad",      # pad      -- unused --
+    "inputs\\[6\\].pad",      # pad      -- unused --
     
     "dvss_pads\\[2\\].pad",
     "dvdd_pads\\[2\\].pad",
     
-    "bidir\\[11\\].pad",
-    "bidir\\[12\\].pad",
-    "bidir\\[13\\].pad",
-    "bidir\\[14\\].pad",
-    "bidir\\[15\\].pad",
-    "bidir\\[16\\].pad",
-    "bidir\\[17\\].pad",
-    "bidir\\[18\\].pad",
-    "bidir\\[19\\].pad",
+    "inputs\\[7\\].pad",      # pad      -- unused --
+    "inputs\\[8\\].pad",      # pad      -- unused --
+    "inputs\\[9\\].pad",      # pad      -- unused --
+    "inputs\\[10\\].pad",     # pad      -- unused --
+    "bidir\\[19\\].pad",      # pad       A11 <-- Z80
+    "bidir\\[20\\].pad",      # pad       A12 <-- Z80
+    "bidir\\[21\\].pad",      # pad       A13 <-- Z80
+    "bidir\\[22\\].pad",
+    "bidir\\[23\\].pad",      # pad       A15 <-- Z80
     
     "dvss_pads\\[3\\].pad",
     "dvdd_pads\\[3\\].pad",
     
-    "bidir\\[20\\].pad",
-    "bidir\\[21\\].pad"
+    clk_pad,                  #
+    "bidir\\[4\\].pad",       # pad        D4  <-> Z80 (note that Z80 order of data-bus is non sequential)
 ]
 
 PAD_NORTH: [
-    "analog\\[5\\].pad",
-    "analog\\[4\\].pad",
-    "analog\\[3\\].pad",
+    "bidir\\[0\\].pad",       # pad        D0  <-> Z80 (TODO: need to move this to the NORTH side!!!)
+    "bidir\\[7\\].pad",       # pad        D7  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[2\\].pad",       # pad        D2  <-> Z80 (note that Z80 order of data-bus is non sequential)
 
     "dvss_pads\\[4\\].pad",
-    "dvdd_pads\\[4\\].pad",
+    "dvdd_pads\\[4\\].pad",   # VDD
 
-    "analog\\[2\\].pad",
-    "analog\\[1\\].pad",
-    "analog\\[0\\].pad"
+    "bidir\\[6\\].pad",       # pad        D6  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[5\\].pad",       # pad        D5  <-> Z80 (note that Z80 order of data-bus is non sequential)
+    "bidir\\[3\\].pad",       # pad        D3  <-> Z80 (note that Z80 order of data-bus is non sequential)
 ]
 
 
 PAD_WEST: [
-    "bidir\\[43\\].pad",
-    "bidir\\[42\\].pad",
-    "bidir\\[41\\].pad",
+    "inputs\\[3\\].pad",      # pad     BUSRQ --> Z80
+    "inputs\\[0\\].pad",      # pad      WAIT --> Z80
+    "bidir\\[31\\].pad",      # pad     BUSAK <-- Z80
     
     "dvss_pads\\[7\\].pad",
     "dvdd_pads\\[7\\].pad",
     
-    "bidir\\[40\\].pad",
-    "bidir\\[39\\].pad",
-    "bidir\\[38\\].pad",
-    "bidir\\[37\\].pad",
-    "bidir\\[36\\].pad",
-    "bidir\\[35\\].pad",
-    "bidir\\[34\\].pad",
-    "bidir\\[33\\].pad",
+    "bidir\\[28\\].pad",      # pad        WR <-- Z80
+    "bidir\\[27\\].pad",      # pad        RD <-- Z80
+    "bidir\\[26\\].pad",      # pad      IORQ <-- Z80
+    "inputs\\[11\\].pad",     # pad      -- unused --
+    "inputs\\[12\\].pad",     # pad      -- unused --
+    "inputs\\[13\\].pad",     # pad      -- unused --
+    "inputs\\[14\\].pad",     # pad      -- unused --
+    "inputs\\[15\\].pad",     # pad      -- unused --
 
     "dvss_pads\\[6\\].pad",
     "dvdd_pads\\[6\\].pad",
 
-    "bidir\\[32\\].pad",
-    "bidir\\[31\\].pad",
-    "bidir\\[30\\].pad",
-    "bidir\\[29\\].pad",
-    "bidir\\[28\\].pad",
-    "bidir\\[27\\].pad",
-    "bidir\\[26\\].pad",
-    "bidir\\[25\\].pad",
-    "bidir\\[24\\].pad",
+    "inputs\\[16\\].pad",     # pad      -- unused --
+    "inputs\\[17\\].pad",     # pad      -- unused --
+    "inputs\\[18\\].pad",     # pad      -- unused --
+    "inputs\\[19\\].pad",     # pad      -- unused --
+    "inputs\\[20\\].pad",     # pad      -- unused --
+    "inputs\\[21\\].pad",     # pad      -- unused --
+    "bidir\\[25\\].pad",      # pad      MREQ <-- Z80
+    "bidir\\[30\\].pad",      # pad      HALT <-- Z80
+    "inputs\\[2\\].pad",      # pad       NMI --> Z80
 
     "dvss_pads\\[5\\].pad",
     "dvdd_pads\\[5\\].pad",
 
-    "bidir\\[23\\].pad",
-    "bidir\\[22\\].pad"
+    "inputs\\[1\\].pad",      # pad       INT --> Z80
+    "bidir\\[1\\].pad",       # pad        D1  <-> Z80 (note that Z80 order of data-bus is non sequential)    
 ]
