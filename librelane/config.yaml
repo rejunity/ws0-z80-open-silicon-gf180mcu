@@ -37,6 +37,7 @@ VERILOG_FILES:
 
 # Enable plugin for better SystemVerilog support
 # USE_SLANG: True
+# SLANG_ARGUMENTS: ['--keep-hierarchy']
 
 # Slightly smaller file sizes
 PRIMARY_GDSII_STREAMOUT_TOOL: klayout
@@ -157,8 +158,9 @@ MAGIC_GDS_FLATGLOB:
 - "xdec_*"
 - "ypredec*"
 - "xpredec*"
-- "xdec8_*"
 - "prexdec_*"
+- "xdec8_*"
+- "xdec16_*"
 - "xdec32_*"
 - "sa_*"
 
