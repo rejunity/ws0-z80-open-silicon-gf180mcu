@@ -72,10 +72,13 @@ module chip_core #(
     assign input_pd[3:0] = '0;
     // default configuration pins to all 0s, pull-downs ON
     assign input_pd[8:4] = '1;
-    // set the rest of input pull-downs off
-    assign input_pd[NUM_INPUT_PADS-1:9] = '0;
+    // set the rest of input pull-downs ON
+    assign input_pd[NUM_INPUT_PADS-1:9] = '1; // LukeW: I'd recommend a pull-down
+                                              // otherwise pads can float up to mid rail and
+                                              // start drawing current.
+                                              // The pulls are pretty weak, like 100k or so.
 
-    // Disable pull-down for input
+    // Disable pull-ups for input
     assign input_pu = '0;
 
 
