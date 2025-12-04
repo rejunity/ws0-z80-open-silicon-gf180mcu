@@ -81,7 +81,7 @@ GRT_RESIZER_HOLD_SLACK_MARGIN: 0.5 # default 0.05, original wafer-space template
 
 # Increase for more logic
 # on your die
-PL_TARGET_DENSITY_PCT: 35
+PL_TARGET_DENSITY_PCT: 20
 GRT_ALLOW_CONGESTION: true
 
 # Fix antenna violations after DRT
