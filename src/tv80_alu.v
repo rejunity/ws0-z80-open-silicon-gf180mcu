@@ -300,7 +300,7 @@ module tv80_alu (/*AUTOARG*/
 		F_Out[Flag_Z] = 1'b0;
 	      end
 	    F_Out[Flag_S] = Q_t[7];
-            F_Out[Flag_P] = ~(^Q_t);
+            F_Out[Flag_P] = ~ (^(DAA_Q[7:0])); // (ReJ fix) WAS: F_Out[Flag_P] = ~ (^DAA_Q)
           end // case: when 4'b1101, 4'b1110
 
 	4'b1001 :
