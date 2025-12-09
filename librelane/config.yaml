@@ -76,10 +76,6 @@ CLOCK_PERIOD: 40 # 25 MHz
 # As a quick workaround STD_CELL_LIBRARY is now also (duplicated) specified in slot_1x1.yaml and slot_0p5x0p5.yaml
 STD_CELL_LIBRARY: "gf180mcu_fd_sc_mcu9t5v0"
 
-# Fix hold violations
-PL_RESIZER_HOLD_SLACK_MARGIN: 0.5 # default 0.1, original wafer-space template: 0.35
-GRT_RESIZER_HOLD_SLACK_MARGIN: 0.5 # default 0.05, original wafer-space template: 0.3
-
 # Increase for more logic
 # on your die
 PL_TARGET_DENSITY_PCT: 20
@@ -91,13 +87,17 @@ DRT_ANTENNA_MARGIN: 10 # %
 
 # Z80 project specific FIXES --------------------------------------------------
 # Fix HOLD violations
+PL_RESIZER_HOLD_SLACK_MARGIN: 0.5 # default 0.1, original wafer-space template: 0.35 ns
+GRT_RESIZER_HOLD_SLACK_MARGIN: 0.5 # default 0.05, original wafer-space template: 0.3 ns
+
 PL_RESIZER_HOLD_MAX_BUFFER_PCT: 100 # default 50
 GRT_RESIZER_HOLD_MAX_BUFFER_PCT: 100 # default 50
-# (deprecated, use GRT_ instead) GLB_RESIZER_HOLD_MAX_BUFFER_PERCENT: 100 # default 50
 
-PL_RESIZER_ALLOW_SETUP_VIOS: True # default False
-GRT_RESIZER_ALLOW_SETUP_VIOS: True # default False
-# (deprecated, use GRT_ instead) GLB_RESIZER_ALLOW_SETUP_VIOS: True # default False
+PL_RESIZER_SETUP_SLACK_MARGIN: 4.0 # default 0.05 ns
+GRT_RESIZER_SETUP_SLACK_MARGIN: 1.0 # default 0.025 ns
+
+# PL_RESIZER_ALLOW_SETUP_VIOS: True # default False
+# GRT_RESIZER_ALLOW_SETUP_VIOS: True # default False
 
 # Experimental option!
 # PL_RESIZER_FIX_HOLD_FIRST: True # default False
