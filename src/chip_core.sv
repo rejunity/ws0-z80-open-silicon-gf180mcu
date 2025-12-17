@@ -32,10 +32,10 @@ module chip_core #(
 );
 
     // See here for usage: https://gf180mcu-pdk.readthedocs.io/en/latest/IPs/IO/gf180mcu_fd_io/digital.html
-    
+
     assign bidir_cs = '0;
     assign bidir_sl = '0;
-    assign bidir_ie = ~bidir_oe;
+    assign bidir_ie = ~bidir_oe; // @TODO: disable inputs when data and address bus are floating (RESET, BUSAK)
     assign bidir_pu = '0;
     assign bidir_pd = '0;
     
@@ -43,43 +43,36 @@ module chip_core #(
     assign _unused = &{input_in[NUM_INPUT_PADS-1 : 9],
                        bidir_in[NUM_BIDIR_PADS-1 : 8]};
 
-    // NOTE: The original Z80 has a peculiar data bus pin order, keep it to minimize wire crossing on the DIP40 PCB
-    // Also see: http://www.righto.com/2014/09/why-z-80s-data-pins-are-scrambled.html
-
-    // @TODO: float A, D on reset
-    // @TODO: float A, D, MREQ, RD, WR, IORQ pins on BUSAK (Figure 10 BUS Request/Acknowledge Cycle)
+    // control wires
+    wire busak_n = bidir_out[24 + 7];
 
     // 8 bidirectional data bus pins
     wire data_oe;
-    assign bidir_oe[7:0]        
-                                = {8{data_oe}}; // 1 = Output | 0 = Input
+    assign bidir_oe[7:0]        = {8{data_oe}};                     // 1 = Output | 0 = Input
 
 
     // 16 output address bus pins
-    assign bidir_oe[8+:16]      
-                                = {16{1'b1}};   // 1 = Output
+    assign bidir_oe[8+:16]      = {16{1'b1 && rst_n && busak_n}};   // 1 = Output | 0 = Input - ADDRESS bus is floating during RESET and BUSAK
 
     // 8 output control pins
-    assign bidir_oe[24+:8]
-                                = {8{1'b1}};    // 1 = Output
+    assign bidir_oe[24 + 0]     = 1'b1;                             // 1 = Output             - M1 always output
+    assign bidir_oe[25 +:4]     = { 4{1'b1          && busak_n}};   // 1 = Output | 0 = Input - MREQ, RD, WR, IORQ are floating ONLY during BUSAK (see: Figure 10 BUS Request/Acknowledge Cycle)
+    assign bidir_oe[29 +:3]     = { 3{1'b1}};                       // 1 = Output             - RFSH, HALT, BUSAK always output
 
-    // set the rest of bidir as output and drive them low
-    // assign bidir_oe[NUM_BIDIR_PADS-1:32] = '1;
-    // assign bidir_out[NUM_BIDIR_PADS-1:32] = '0;
-
-    // @TODO: investigate original Z80 if pull-down/pull-up should be attached to the inputs
-    // input pull-downs off
+    // No pull-ups neither for 1) original Z80 input pins, 2) nor for configuration pins (which are not part of the original Z80), 3) nor for unused pins
+    //                            - for both INT and BUSREQ it is explicitly stated in the Z80 Manual "requires an external pull-up for these applications"
+    //                            - for NMI and WAIT there is nothing in the Z80 Manual, but we assume they were implemented electrically similar to INT and BUSREQ
+    assign input_pu = '0;
+    // No pull-downs since the original Z80 input pins are active LOW and should NOT be pulled down
     assign input_pd[3:0] = '0;
-    // default configuration pins to all 0s, pull-downs ON
+
+    // Set configuration pins (not part of the original Z80) to 0s, pull-downs ON
     assign input_pd[8:4] = '1;
-    // set the rest of input pull-downs ON
+    // Set the rest of input pull-downs ON
     assign input_pd[NUM_INPUT_PADS-1:9] = '1; // LukeW: I'd recommend a pull-down
                                               // otherwise pads can float up to mid rail and
                                               // start drawing current.
                                               // The pulls are pretty weak, like 100k or so.
-
-    // Disable pull-ups for input
-    assign input_pu = '0;
 
 
     z80 z80 (
@@ -93,6 +86,8 @@ module chip_core #(
         .nmi_n   (input_in[2]),
         .busrq_n (input_in[3]),
 
+        // NOTE: The original Z80 has a peculiar data bus pin order, keep it to minimize wire crossing on the DIP40 PCB
+        // Also see: http://www.righto.com/2014/09/why-z-80s-data-pins-are-scrambled.html
         .di      ({bidir_in [7:0]}),
         .dout    ({bidir_out[7:0]}),
         .doe     (data_oe),
@@ -114,7 +109,7 @@ module chip_core #(
     // EXAMPLE: the following code is example from the original template
     // logic [NUM_BIDIR_PADS-1:0] count;
 
-    // always_ff @(posedge clk) begin
+    // always_ff @(posedge clk) beginf
     //     if (!rst_n) begin
     //         count <= '0;
     //     end else begin

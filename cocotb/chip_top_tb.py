@@ -29,7 +29,9 @@ async def set_defaults(dut):
 
 async def set_inputs(dut, ctrl_in, data_in):
     dut.input_PAD.value = ctrl_in
-    dut.bidir_PAD.value = LogicArray('Z' * 24 + f"{data_in:08b}")
+    if isinstance(data_in, int):
+        data_in = f"{data_in:08b}" 
+    dut.bidir_PAD.value = LogicArray('Z' * 24 + data_in)
 
 async def enable_power(dut):
     dut.VDD.value = 1
@@ -64,10 +66,139 @@ async def start_up(dut):
 
 CONFIG_EARLY_SIGNALS = 0b00000
 BUS_READY = (CONFIG_EARLY_SIGNALS << 4) | 0b1111 # not WAIT, not INT, not NMI, not BUSRQ
+BUS_WAIT  = (CONFIG_EARLY_SIGNALS << 4) | 0b1110 # not BUSRQ, not NMI, not INT,     WAIT
+BUS_REQ   = (CONFIG_EARLY_SIGNALS << 4) | 0b0111 #     BUSRQ, not NMI, not INT, not WAIT
 OPCODE_NOP  = 0x00
 OPCODE_LDHL = 0x21
 
 @cocotb.test()
+async def test__RESET_sequence(dut):
+    dut._log.info("Test RESET")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+
+    await ClockCycles(dut.clk_PAD, 4) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+        
+    for i in range(8):
+        print_pins(dut)
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        assert str(addr) == "Z" * 16    # ADDRESS bus is floating during RESET
+        assert str(data) == "Z" * 8     # DATA    bus is floating during RESET
+        assert str(ctrl) == "1" * 8     # control signals are deasserted (active low) during RESET
+        await ClockCycles(dut.clk_PAD, 1)
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_WAIT, 'Z'*8, i, verbose=False)
+        print_pins(dut)
+        assert controls["m1"] == 1
+        assert str(addr) == "0" * 16    # ADDRESS goes to 0 after RESET
+
+
+    for i in range(4, 16):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=False)
+        print_pins(dut)
+
+
+@cocotb.test()
+async def test__BUSREQ(dut):
+    dut._log.info("Test BUSREQ")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+    await ClockCycles(dut.clk_PAD, 16) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+    z80_cycle = 0
+    for i in range(8):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
+        print_pins(dut)
+        assert controls["busak"] == 0
+        z80_cycle += 1
+
+    last_addr = 0
+    last_halt = 0
+    for i in range(16):
+        controls, addr, data = await z80_step(dut, BUS_REQ, 'Z'*8, z80_cycle, verbose=True)
+        if i == 0:
+            cocotb.log.info("BUSREQ asserted...")
+        if controls["busak"] == 1:
+            assert str(addr) == "Z" * 16    # ADDRESS bus is floating during BUSAK
+            assert str(data) == "Z" * 8     # DATA    bus is floating during BUSAK
+            assert controls["m1"] == 0
+            assert controls["rfsh"] == 0
+            assert controls["mreq"] == "Z"
+            assert controls["rd"] == "Z"
+            assert controls["wr"] == "Z"
+            assert controls["ioreq"] == "Z"
+            assert last_halt == controls["halt"]
+            break
+        else:
+            last_addr = addr.to_unsigned()
+            last_halt = controls["halt"]
+
+        z80_cycle += 1
+
+    for i in range(16):
+        controls, addr, data = await z80_step(dut, BUS_REQ, 'Z'*8, z80_cycle, verbose=True)
+        assert controls["busak"] == 1
+        assert str(addr) == "Z" * 16        # ADDRESS bus is floating during BUSAK
+        assert str(data) == "Z" * 8         # DATA    bus is floating during BUSAK
+        assert controls["m1"] == 0
+        assert controls["rfsh"] == 0
+        assert controls["mreq"] == "Z"
+        assert controls["rd"] == "Z"
+        assert controls["wr"] == "Z"
+        assert controls["ioreq"] == "Z"
+        assert last_halt == controls["halt"]
+
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=True)
+        if i == 0:
+            cocotb.log.info("BUSREQ deasserted...")
+        if controls["busak"] == 0:
+            break
+        assert i < 2                        # Should take not more than 1 cyle to leave BUSAK state once BUSREQ was deasserted
+        assert str(addr) == "Z" * 16        # ADDRESS bus is floating during BUSAK
+        assert controls["m1"] == 0
+        assert controls["rfsh"] == 0
+        assert controls["mreq"] == "Z"
+        assert controls["rd"] == "Z"
+        assert controls["wr"] == "Z"
+        assert controls["ioreq"] == "Z"
+        assert last_halt == controls["halt"]
+
+    z80_cycle += 1
+    controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=True)
+    assert last_addr + 1 == addr.to_unsigned()
+    assert controls["busak"] == 0
+    assert controls["m1"] == 1
+    assert str(addr) != "Z" * 16    # ADDRESS bus is floating during RESET
 async def test__NOP(dut):
     await start_up(dut)
     dut._log.info("Test NOP")
@@ -127,26 +258,37 @@ async def z80_step(z80, ctrl_in, data_in, cycle, verbose=False):
     await set_inputs(z80, ctrl_in, data_in)
     await ClockCycles(z80.clk_PAD, 1)
     data = z80.bidir_PAD.value[7:0]
-    addr = z80.bidir_PAD.value[23:8].to_unsigned()
-    ctrl = z80.bidir_PAD.value[31:24].to_unsigned()
+    addr = z80.bidir_PAD.value[23:8]
+    cpin = z80.bidir_PAD.value[31:24]
 
-    ctrl = [int(not bit(ctrl, n)) for n in range(8)]
-    ctrl = dict(zip(['m1', 'mreq', 'ioreq', 'rd', 'wr', 'rfsh', 'halt', 'busak'], ctrl))
+    ctrl = convert_control_pins_to_signals(cpin)
 
     if (verbose):
-        print (f"clk: {cycle:3d}  {ctrl}  addr:0x{addr:04X}    pins:{z80.bidir_PAD.value}" \
+        hex_addr = f"0x{addr.to_unsigned():04X}" if addr.is_resolvable else "xx----"
+        print (f"clk: {cycle:3d}  {ctrl}  addr:{hex_addr}    pins:{cpin}|{addr}|{data}" \
             .replace("'", "").replace("{", "").replace("}", "").replace(",", ""))
-        if (ctrl['m1'] and ctrl['rd']):
-            print(f"    OPCODE: {data_in}") # int(z80.uio_in.value):02X
-        elif (ctrl['rd']):
+        m1 = ctrl['m1']==True
+        rd = ctrl['rd']==True
+        wr = ctrl['wr']==True
+        if m1 and rd:
+            print(f"    OPCODE: {data_in}")
+        elif rd:
             print(f"    READ DATA: {data}")
-        if (ctrl['wr']):
+        if wr:
             print(f"    WRITE DATA: {data_in}")
     return ctrl, addr, data
 
-def bit(byte, n):
-    return byte & (1<<n) != 0
+def convert_control_pins_to_signals(ctrl):
+    # def is_bit_active_low(byte, n):
+    #     return byte & (1<<n) == 0
+    def is_bit_active_low(logic_array, n):
+        return str(logic_array)[-n-1] == "0"
+    def is_bit_floating(logic_array, n):
+        return str(logic_array)[-n-1] == "Z"
 
+    ctrl = ['Z' if is_bit_floating(ctrl, n) else int(is_bit_active_low(ctrl, n)) for n in range(8)]
+    ctrl = dict(zip(['m1', 'mreq', 'ioreq', 'rd', 'wr', 'rfsh', 'halt', 'busak'], ctrl))
+    return ctrl
 
 # EXAMPLE: the following code is example from the original template
 # @cocotb.test()
