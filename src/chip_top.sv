@@ -131,7 +131,7 @@ module chip_top #(
 
     // Signal pads, 54 (+clock+reset) in total
     parameter NUM_INPUT_PADS = 4+18,    // only 4 necessary for Z80: INT, NMI, WAIT, BUSRQ (not counting clock & reset here)
-                                        //      5 for chip configuration
+                                        //      6 for chip configuration
                                         // and the rest (74-8-10-4-?-8-16-8-2=18) are unused
                                         // unused pins are implemented as input IO cells
     parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +
@@ -184,7 +184,7 @@ module chip_top #(
 
     // Signal pads, 46 (+clock+reset) in total
     parameter NUM_INPUT_PADS = 4+10,    // only 4 necessary for Z80: INT, NMI, WAIT, BUSRQ (not counting clock & reset here)
-                                        //      5 for chip configuration
+                                        //      6 for chip configuration
                                         // and the rest (56-4-4-4-?-8-16-8-2=10) are unused
                                         // unused pins are implemented as input IO cells
     parameter NUM_BIDIR_PADS = 8+16+8   //  8 data bus (bidir) +

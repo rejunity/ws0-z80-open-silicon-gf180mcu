@@ -44,7 +44,8 @@ module chip_core #(
                        bidir_in[NUM_BIDIR_PADS-1 : 8]};
 
     // control wires
-    wire busak_n = bidir_out[24 + 7];
+    wire busak_n;
+    assign busak_n = bidir_out[24 + 7];
 
     // 8 bidirectional data bus pins
     wire data_oe;
@@ -59,20 +60,23 @@ module chip_core #(
     assign bidir_oe[25 +:4]     = { 4{1'b1          && busak_n}};   // 1 = Output | 0 = Input - MREQ, RD, WR, IORQ are floating ONLY during BUSAK (see: Figure 10 BUS Request/Acknowledge Cycle)
     assign bidir_oe[29 +:3]     = { 3{1'b1}};                       // 1 = Output             - RFSH, HALT, BUSAK always output
 
-    // No pull-ups neither for 1) original Z80 input pins, 2) nor for configuration pins (which are not part of the original Z80), 3) nor for unused pins
-    //                            - for both INT and BUSREQ it is explicitly stated in the Z80 Manual "requires an external pull-up for these applications"
-    //                            - for NMI and WAIT there is nothing in the Z80 Manual, but we assume they were implemented electrically similar to INT and BUSREQ
-    assign input_pu = '0;
+    // No pull-ups for the original Z80 input pins:
+    //   - for both INT and BUSREQ it is explicitly stated in the Z80 Manual "requires an external pull-up for these applications"
+    //   - for NMI and WAIT there is nothing in the Z80 Manual, but we assume they were implemented electrically similar to INT and BUSREQ
+    assign input_pu[3:0] = '0;
     // No pull-downs since the original Z80 input pins are active LOW and should NOT be pulled down
     assign input_pd[3:0] = '0;
 
-    // Set configuration pins (not part of the original Z80) to 0s, pull-downs ON
-    assign input_pd[8:4] = '1;
-    // Set the rest of input pull-downs ON
-    assign input_pd[NUM_INPUT_PADS-1:9] = '1; // LukeW: I'd recommend a pull-down
-                                              // otherwise pads can float up to mid rail and
-                                              // start drawing current.
-                                              // The pulls are pretty weak, like 100k or so.
+    // Set configuration pins (not part of the original Z80) to 10_00_10
+    assign input_pu[9:4] = 6'b100010;
+    assign input_pd[9:4] = ~input_pu[9:4];
+
+    // Set the rest of input pull-ups off, pull-DOWNs ON
+    // LukeW: I'd recommend a pull-down otherwise pads can float up to mid rail
+    // and start drawing current. The pulls are pretty weak, like 100k or so.
+
+    assign input_pu[NUM_INPUT_PADS-1:10] = '0;
+    assign input_pd[NUM_INPUT_PADS-1:10] = '1;
 
 
     z80 z80 (
@@ -102,7 +106,7 @@ module chip_core #(
         .wr_n    (bidir_out[24 + 4]),
         .rfsh_n  (bidir_out[24 + 5]),
         
-        .early_signals(input_in[8:4])
+        .early_signals(input_in[9:4])
     );
 
 
