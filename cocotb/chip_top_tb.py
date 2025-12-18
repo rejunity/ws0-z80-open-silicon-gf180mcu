@@ -213,6 +213,41 @@ async def test__BUSREQ(dut):
     assert controls["m1"] == 1
     assert str(addr) != "Z" * 16    # ADDRESS bus is floating during RESET
 
+
+@cocotb.test()
+async def test__timing(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
+    dut._log.info("Test TIMING")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    def print_pins(dut, edge=True):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        posneg = '_' if dut.clk_PAD.value == 0 else '^'
+        t_ns = str(cocotb.simulator.get_sim_time()[1]//100)
+        print (f"clk: {str(dut.clk_PAD.value)} {t_ns} {(posneg if edge else ' ') * 70}  pins:{ctrl}|{addr}|{data}")
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+
+    steps_per_cycle = 20
+    time_step = 1 / Z80_FREQ * 1000 # "ns"
+    time_step = time_step / steps_per_cycle
+    print(time_step)
+    for i in range(16 * steps_per_cycle):
+        await set_inputs(dut, BUS_READY, OPCODE_NOP)
+        last_clk = dut.clk_PAD.value
+        await Timer(time_step, "ns")
+        print_pins(dut, last_clk != dut.clk_PAD.value)
+
+        if i > steps_per_cycle * 4:
+            dut.rst_n_PAD.value = True
+
 @cocotb.test()
 async def test__NOP(dut):
     await start_up(dut)
