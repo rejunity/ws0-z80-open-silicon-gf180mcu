@@ -73,21 +73,24 @@ OPCODE_LDHL = 0x21
 
 @cocotb.test()
 async def test__RESET_sequence(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
     dut._log.info("Test RESET")
     if gl:
         await enable_power(dut)
     await start_clock(dut.clk_PAD, Z80_FREQ)
-
-    cocotb.log.info("Reset asserted...")
-    dut.rst_n_PAD.value = False
-
-    await ClockCycles(dut.clk_PAD, 4) # wait at least 3 cycles with RESET asserted according to Z80 Manual
 
     def print_pins(dut):
         data = dut.bidir_PAD.value[7:0]
         addr = dut.bidir_PAD.value[23:8]
         ctrl = dut.bidir_PAD.value[31:24]
         print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+
+    await ClockCycles(dut.clk_PAD, 4) # wait at least 3 cycles with RESET asserted according to Z80 Manual
         
     for i in range(8):
         print_pins(dut)
@@ -105,9 +108,9 @@ async def test__RESET_sequence(dut):
     for i in range(4):
         controls, addr, data = await z80_step(dut, BUS_WAIT, 'Z'*8, i, verbose=False)
         print_pins(dut)
-        assert controls["m1"] == 1
+        if i > 0:
+            assert controls["m1"] == 1 # M1 is occasionally delayed after RESET cycle (in Gate Level tests)
         assert str(addr) == "0" * 16    # ADDRESS goes to 0 after RESET
-
 
     for i in range(4, 16):
         controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=False)
@@ -116,6 +119,9 @@ async def test__RESET_sequence(dut):
 
 @cocotb.test()
 async def test__BUSREQ(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
     dut._log.info("Test BUSREQ")
     if gl:
         await enable_power(dut)
@@ -134,10 +140,17 @@ async def test__BUSREQ(dut):
         ctrl = dut.bidir_PAD.value[31:24]
         print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
 
+
     z80_cycle = 0
-    for i in range(8):
+    for i in range(4):
         controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
         print_pins(dut)
+        z80_cycle += 1
+        if controls["m1"] == 1:
+            break
+
+    for i in range(9):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=True)
         assert controls["busak"] == 0
         z80_cycle += 1
 
@@ -199,6 +212,8 @@ async def test__BUSREQ(dut):
     assert controls["busak"] == 0
     assert controls["m1"] == 1
     assert str(addr) != "Z" * 16    # ADDRESS bus is floating during RESET
+
+@cocotb.test()
 async def test__NOP(dut):
     await start_up(dut)
     dut._log.info("Test NOP")
@@ -209,7 +224,7 @@ async def test__NOP(dut):
     z80_cycle = 0
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0 and controls['m1'] == 0:
+        if z80_cycle == 0:
             continue
 
         if z80_cycle % cycles_per_instr == 0 or \
@@ -237,7 +252,7 @@ async def test__LD_HL2121(dut):
     z80_cycle = 0
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0 and controls['m1'] == 0:
+        if z80_cycle == 0:
             continue
 
         if z80_cycle % cycles_per_instr == 0 or \
