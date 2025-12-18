@@ -286,7 +286,7 @@ module z80 (
     output wire         halt_n,
     output wire         busak_n,
 
-    input wire[4:0]     early_signals
+    input wire[5:0]     early_signals
 );
 
     wire         normal_mreq_n;
@@ -304,13 +304,13 @@ module z80 (
     // assign rd_n   = early_signals ? early_rd_n   : normal_rd_n;
     // assign wr_n   = early_signals ? early_wr_n   : normal_wr_n;
 
-    assign mreq_n = early_signals[4] ?
+    assign mreq_n = early_signals[5] ?
                     (rfsh_n ? (early_mreq_n & normal_mreq_n) : early_mreq_n) :
-                    early_signals[3] ? early_mreq_n : normal_mreq_n;
-
-    assign iorq_n = early_signals[2] ? (early_iorq_n & normal_iorq_n) :
-                    early_signals[1] ? early_iorq_n : normal_iorq_n;
-    assign rd_n   = early_signals[0] ? early_rd_n : normal_rd_n;
+                    early_signals[4] ? early_mreq_n : normal_mreq_n;
+    assign iorq_n = early_signals[3] ? (early_iorq_n & normal_iorq_n) :
+                    early_signals[2] ? early_iorq_n : normal_iorq_n;
+    assign rd_n   = early_signals[1] ? (early_rd_n & normal_rd_n):
+                    early_signals[0] ? early_rd_n : normal_rd_n ;
     assign wr_n   =                                 normal_wr_n;
 
     tv80s #(
