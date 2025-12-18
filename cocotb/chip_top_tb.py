@@ -282,17 +282,6 @@ async def test__FETCH_timing(dut):
     await ClockCycles(dut.clk_PAD, 1) # T3->T4
     dut._log.info("M1|T4 cycle")
 
-    # await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=True)
-    # print_pins(dut)
-    # await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=True)
-    # print_pins(dut)
-    # await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=True)
-    # print_pins(dut)
-    # assert ctrl(dut)["m1"] == 1
-
-    # for i in range(7):
-    #     await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=True)
-
     # NOTE: MREQ might be asserted because of the REFRESH cycle during M1|T4
     assert ctrl(dut)["m1"]   == 0
     assert ctrl(dut)["rd"]   == 0
@@ -348,6 +337,8 @@ async def test__FETCH_timing(dut):
     await Timer( 10, "ns");         print_pins(dut, False)                  # _/^^^\___/^^^\___/^^ 110 ns
     assert ctrl(dut)["m1"]   == 0
     assert addr(dut) == 0x01
+
+@cocotb.test()
 async def test__NOP(dut):
     await start_up(dut)
     dut._log.info("Test NOP")
