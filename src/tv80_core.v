@@ -216,7 +216,7 @@ module tv80_core (/*AUTOARG*/
   reg [15:0]     PC16_B;
   reg [15:0]     SP16, SP16_A, SP16_B;
   reg [15:0]     ID16_B;
-  reg            Oldnmi_n;
+  reg [1:0]      Oldnmi_n;
 
   tv80_mcode #(Mode, Flag_C, Flag_N, Flag_P, Flag_X, Flag_H, Flag_Y, Flag_Z, Flag_S) i_mcode
     (
@@ -1164,7 +1164,7 @@ module tv80_core (/*AUTOARG*/
           BusReq_s <= 1'b0;
           INT_s <= 1'b0;
           NMI_s <= 1'b0;
-          Oldnmi_n <= 1'b0;
+          Oldnmi_n <= 2'b00;
         end
       else
         begin
@@ -1176,11 +1176,13 @@ module tv80_core (/*AUTOARG*/
                 begin
                   NMI_s <= 1'b0;
                 end
-              else if (nmi_n == 1'b0 && Oldnmi_n == 1'b1 )
+              else if (Oldnmi_n[0] == 1'b0 && Oldnmi_n[1] == 1'b1)
                 begin
                   NMI_s <= 1'b1;
                 end
-              Oldnmi_n <= nmi_n;
+              Oldnmi_n[0] <= nmi_n;
+              Oldnmi_n[1] <= Oldnmi_n[0]; // ReJ: for some unknown at the moment reason, after synthesis in Gate Level simulation Oldnmi_n[0] == nmi_n
+                                          // to workaround this at least potential issue, original Oldnmi_n 1-bit register was replaced with 2 bits
             end
         end
     end

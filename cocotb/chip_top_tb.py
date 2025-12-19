@@ -23,58 +23,24 @@ hdl_toplevel = "chip_top"
 
 Z80_FREQ = 4 # in MHz
 
-async def set_defaults(dut):
-    dut.input_PAD.value = 0
-    dut.bidir_PAD.value = LogicArray('Z' * 24 + '0' * 8)
-
-async def set_inputs(dut, ctrl_in, data_in):
-    dut.input_PAD.value = ctrl_in
-    if isinstance(data_in, int):
-        data_in = f"{data_in:08b}" 
-    dut.bidir_PAD.value = LogicArray('Z' * 24 + data_in)
-
-async def enable_power(dut):
-    dut.VDD.value = 1
-    dut.VSS.value = 0
-
-async def start_clock(clock, freq=50):
-    """Start the clock @ freq MHz"""
-    c = Clock(clock, 1 / freq * 1000, "ns")
-    cocotb.start_soon(c.start())
-
-
-async def reset(clk, reset, active_low=True, time_ns=1000):
-    """Reset dut"""
-    cocotb.log.info("Reset asserted...")
-
-    reset.value = not active_low
-    await Timer(time_ns, "ns")
-    reset.value = active_low
-
-    cocotb.log.info("Reset deasserted.")
-
-
-async def start_up(dut):
-    """Startup sequence"""
-    await set_defaults(dut)
-    if gl:
-        await enable_power(dut)
-    await start_clock(dut.clk_PAD, Z80_FREQ)
-
-    await reset(dut.clk_PAD, dut.rst_n_PAD)
-
-
 CONFIG_EARLY_SIGNALS = 0b10_00_10
 BUS_READY = (CONFIG_EARLY_SIGNALS << 4) | 0b1111 # not BUSRQ, not NMI, not INT, not WAIT
 BUS_WAIT  = (CONFIG_EARLY_SIGNALS << 4) | 0b1110 # not BUSRQ, not NMI, not INT,     WAIT
+BUS_INT   = (CONFIG_EARLY_SIGNALS << 4) | 0b1101 # not BUSRQ, not NMI,     INT, not WAIT
+BUS_NMI   = (CONFIG_EARLY_SIGNALS << 4) | 0b1011 # not BUSRQ,     NMI, not INT, not WAIT
 BUS_REQ   = (CONFIG_EARLY_SIGNALS << 4) | 0b0111 #     BUSRQ, not NMI, not INT, not WAIT
 OPCODE_NOP  = 0x00
 OPCODE_LDHL = 0x21
-OPCODE_IN   = 0xDB
-OPCODE_OUT  = 0xD3
 OPCODE_STHL = 0x77
 OPCODE_XOR  = 0xAF
+OPCODE_OUT  = 0xD3
+OPCODE_IN   = 0xDB
+OPCODE_EI   = 0xFB
 
+####### SIGNALS ###############################################################################################################
+#
+# RESET, BUSREQ
+# 
 @cocotb.test()
 async def test__RESET_sequence(dut):
     dut.input_PAD.value = 0
@@ -119,6 +85,116 @@ async def test__RESET_sequence(dut):
     for i in range(4, 16):
         controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=False)
         print_pins(dut)
+
+@cocotb.test()
+async def test__NMI_sequence(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
+    dut._log.info("Test NMI")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+    await ClockCycles(dut.clk_PAD, 16) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+
+    z80_cycle = 0
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
+        print_pins(dut)
+        z80_cycle += 1
+        if controls["m1"] == 1:
+            break
+
+    for int_cycle in range(1, 5):
+        reached_nmi_routine = False
+        for i in range(64):
+            controls, addr, data = await z80_step(dut, (BUS_NMI if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+            if addr.to_unsigned() == 0x0066:
+                reached_nmi_routine = True
+                for j in range(4):
+                    await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=True)
+                    z80_cycle += 1
+                break
+            z80_cycle += 1
+
+        assert reached_nmi_routine == True
+
+
+
+@cocotb.test()
+async def test__INT_sequence(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
+    dut._log.info("Test INT")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+    await ClockCycles(dut.clk_PAD, 16) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+
+    z80_cycle = 0
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
+        print_pins(dut)
+        z80_cycle += 1
+        if controls["m1"] == 1:
+            break
+
+    int_cycle = 5
+    cocotb.log.info("Soft interrupts are DISABLES after RESET.")
+    for i in range(16):
+        controls, addr, data = await z80_step(dut, (BUS_INT if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+        print_pins(dut)
+        if controls["rd"] == 1:
+            assert addr.to_unsigned() == z80_cycle // 4 # no software interrupts
+        z80_cycle += 1
+
+    cocotb.log.info("Enable soft interrupts.")
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_EI, z80_cycle, verbose=True)
+        pc = addr.to_unsigned()
+        print_pins(dut)
+        z80_cycle += 1
+
+    ioreq_set = False
+    # reached_int_routine = False
+    cocotb.log.info("Enable soft interrupts.")
+    for i in range(32):
+        controls, addr, data = await z80_step(dut, (BUS_INT if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+        if controls["ioreq"] == 1:
+            ioreq_set = True
+        # reached_int_routine = addr.to_unsigned() != z80_cycle // 4
+        print_pins(dut)
+        z80_cycle += 1
+
+    assert ioreq_set == True
+    # assert reached_int_routine == True
 
 
 @cocotb.test()
@@ -217,7 +293,10 @@ async def test__BUSREQ(dut):
     assert controls["m1"] == 1
     assert str(addr) != "Z" * 16    # ADDRESS bus is floating during RESET
 
-
+####### TIMING ################################################################################################################
+#
+# FETCH, READ, WRITE...
+#
 @cocotb.test()
 async def test__timing(dut):
     dut.input_PAD.value = 0
@@ -391,52 +470,6 @@ async def test__READ_timing(dut):
     assert ctrl(dut)["rd"]   == 0
     assert addr(dut) == 0
 
-    dut._log.info("FETCH of the new instruction starts here, leading into M2|T1 cycle")
-    # await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # _/
-    # await Timer(100, "ns");         print_pins(dut, False)          # _/^^ 100 ns
-    # assert ctrl(dut)["m1"]   == 1                                     
-    # assert ctrl(dut)["mreq"] == 0
-    # assert ctrl(dut)["rd"]   == 0
-    # await Timer( 10, "ns");         print_pins(dut, False)          # _/^^ 110 ns
-    # assert addr(dut) == 0x01
-    # assert ctrl(dut)["mreq"] == 0                                                                   
-    # await FallingEdge(dut.clk_PAD); print_pins(dut, True)           # _/^^^\
-    # assert addr(dut) == 0x01
-    # assert ctrl(dut)["mreq"] == 0                                   # @TODO: guarantee TdA(MREQf) Min 65ns
-    # await Timer( 85, "ns");         print_pins(dut, False)          # _/^^^\_ 85ns
-    # assert ctrl(dut)["m1"]   == 1
-    # assert ctrl(dut)["mreq"] == 1
-    # assert ctrl(dut)["rd"]   == 1
-    # assert addr(dut) == 0x01
-
-    # await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # _/^^^\___/
-    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\
-    # assert ctrl(dut)["m1"]   == 1
-    # assert ctrl(dut)["mreq"] == 1
-    # assert ctrl(dut)["rd"]   == 1
-    # assert addr(dut) == 0x01
-
-    # await Timer(125-35, "ns");      print_pins(dut, False)          # _/^^^\___/^^^\__ -35ns_/
-    # dut._log.info("DATA is expected to settle, leading into M1|T3")
-    # assert ctrl(dut)["m1"]   == 1
-    # assert ctrl(dut)["mreq"] == 1
-    # assert ctrl(dut)["rd"]   == 1
-    # assert addr(dut) == 0x01
-
-    # await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # _/^^^\___/^^^\___/
-    # await Timer(100, "ns");         print_pins(dut, False)          # _/^^^\___/^^^\___/^^ 100 ns
-    # assert ctrl(dut)["mreq"] == 0
-    # assert ctrl(dut)["rd"]   == 0
-    # assert addr(dut) == 0x01
-    # await Timer( 10, "ns");         print_pins(dut, False)          # _/^^^\___/^^^\___/^^ 110 ns
-    # assert ctrl(dut)["m1"]   == 0
-    # assert addr(dut) == 0x01
-
-
-    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\___/^^^\
-    # await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # _/^^^\___/^^^\___/^^^\___/
-    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\___/^^^\___/^^^\
-
     dut._log.info("READ from memory starts here, leading into M2|T1")
     await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # ... _/
     await Timer(100, "ns");         print_pins(dut, False)          # ... _/^^ 100 ns
@@ -549,22 +582,6 @@ async def test__WRITE_timing(dut):
     assert ctrl(dut)["wr"]   == 0
     assert addr(dut) == 0x2121
 
-    # await Timer(150-85, "ns");      print_pins(dut, False)          # ... _/^^^\_ 150ns
-    # assert ctrl(dut)["m1"]   == 0
-    # assert ctrl(dut)["mreq"] == 1
-    # assert ctrl(dut)["rd"]   == 0
-    # assert ctrl(dut)["wr"]   == 0
-    # assert addr(dut) == 0x02
-    # assert data(dut) == 0x00 # will fail
-
-    # await Timer(150+80-85, "ns");   print_pins(dut, False)          # ... _/^^^\_ 150ns + 80ns
-    # assert ctrl(dut)["m1"]   == 0
-    # assert ctrl(dut)["mreq"] == 1
-    # assert ctrl(dut)["rd"]   == 0
-    # assert ctrl(dut)["wr"]   == 0
-    # assert addr(dut) == 0x02
-    # assert data(dut) == 0x00 # will fail
-
     # @TODO: guarantee TdCf(D)    Max 150ns - "Clock Fall to Data Valid delay"
     # @TODO: guarantee TdD(WRf)Mw Min 80ns  - "Data stable prior to /WR Fall"
     # @TODO: guarantee TwWR       Min 220ns - "/WR pulse width"
@@ -577,7 +594,7 @@ async def test__WRITE_timing(dut):
     assert ctrl(dut)["mreq"] == 1
     assert ctrl(dut)["wr"]   == 1
     assert ctrl(dut)["rd"]   == 0
-    assert data(dut) == '0'*8
+    assert data(dut) == '0'*8                                       # 0 - the result of XOR A,A is expected to be on the data bus at this point
     assert addr(dut) == 0x2121
 
 
@@ -591,6 +608,10 @@ async def test__WRITE_timing(dut):
     assert addr(dut) == 0x2121                                      # @TODO: guarantee TdCTr(A) Min 80ns
 
 
+####### INSTRUCTIONS ##########################################################################################################
+#
+# NOP, memory read & write, IN, OUT
+#
 @cocotb.test()
 async def test__NOP(dut):
     await start_up(dut)
@@ -670,6 +691,7 @@ async def test__LD_INxDB(dut):
         if z80_cycle % cycles_per_instr == 8 or \
            z80_cycle % cycles_per_instr == 9:
             assert controls['ioreq'] == 1
+            assert controls['rd'] == 1
             assert controls['mreq'] == 0
             assert addr.to_unsigned() & 0xFF == 0xDB
         assert controls['wr'] == 0
@@ -741,7 +763,48 @@ async def test__LD_ptrHL_A(dut):
         assert controls['halt'] == 0
         assert controls['busak'] == 0
         z80_cycle += 1
-               
+
+#====== ========= =============================================================================================================
+#====== Utilities =============================================================================================================
+#====== ========= =============================================================================================================
+async def set_defaults(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 24 + '0' * 8)
+
+async def set_inputs(dut, ctrl_in, data_in):
+    dut.input_PAD.value = ctrl_in
+    if isinstance(data_in, int):
+        data_in = f"{data_in:08b}" 
+    dut.bidir_PAD.value = LogicArray('Z' * 24 + data_in)
+
+async def enable_power(dut):
+    dut.VDD.value = 1
+    dut.VSS.value = 0
+
+async def start_clock(clock, freq=50):
+    """Start the clock @ freq MHz"""
+    c = Clock(clock, 1 / freq * 1000, "ns")
+    cocotb.start_soon(c.start())
+
+async def reset(clk, reset, active_low=True, time_ns=1000):
+    """Reset dut"""
+    cocotb.log.info("Reset asserted...")
+
+    reset.value = not active_low
+    await Timer(time_ns, "ns")
+    reset.value = active_low
+
+    cocotb.log.info("Reset deasserted.")
+
+async def start_up(dut):
+    """Startup sequence"""
+    await set_defaults(dut)
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    await reset(dut.clk_PAD, dut.rst_n_PAD)
+
 async def z80_step(z80, ctrl_in, data_in, cycle=-1, verbose=False):
     await set_inputs(z80, ctrl_in, data_in)
     await ClockCycles(z80.clk_PAD, 1)
@@ -778,36 +841,9 @@ def convert_control_pins_to_signals(ctrl):
     ctrl = dict(zip(['m1', 'mreq', 'ioreq', 'rd', 'wr', 'rfsh', 'halt', 'busak'], ctrl))
     return ctrl
 
-# EXAMPLE: the following code is example from the original template
-# @cocotb.test()
-# async def test_counter(dut):
-#     """Run the counter test"""
-
-#     # Create a logger for this testbench
-#     logger = logging.getLogger("my_testbench")
-
-#     logger.info("Startup sequence...")
-
-#     # Start up
-#     await start_up(dut)
-
-#     logger.info("Running the test...")
-
-#     # Wait for some time...
-#     await ClockCycles(dut.clk_PAD, 10)
-
-#     # Start the counter by setting all inputs to 1
-#     dut.input_PAD.value = -1
-
-#     # Wait for a number of clock cycles
-#     await ClockCycles(dut.clk_PAD, 100)
-
-#     # Check the end result of the counter
-#     assert dut.bidir_PAD.value == 100 - 1
-
-#     logger.info("Done!")
-
-
+#====== ============ ==========================================================================================================
+#====== Test Runnner ==========================================================================================================
+#====== ============ ==========================================================================================================
 def chip_top_runner():
 
     proj_path = Path(__file__).resolve().parent
