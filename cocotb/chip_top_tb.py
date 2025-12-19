@@ -70,6 +70,10 @@ BUS_WAIT  = (CONFIG_EARLY_SIGNALS << 4) | 0b1110 # not BUSRQ, not NMI, not INT, 
 BUS_REQ   = (CONFIG_EARLY_SIGNALS << 4) | 0b0111 #     BUSRQ, not NMI, not INT, not WAIT
 OPCODE_NOP  = 0x00
 OPCODE_LDHL = 0x21
+OPCODE_IN   = 0xDB
+OPCODE_OUT  = 0xD3
+OPCODE_STHL = 0x77
+OPCODE_XOR  = 0xAF
 
 @cocotb.test()
 async def test__RESET_sequence(dut):
@@ -346,11 +350,10 @@ async def test__NOP(dut):
     opcode = OPCODE_NOP
     cycles_per_instr = 4
     
-    z80_cycle = 0
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0:
-            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
@@ -367,18 +370,17 @@ async def test__NOP(dut):
         z80_cycle += 1
 
 @cocotb.test()
-async def test__LD_HL2121(dut):
+async def test__LD_HLx2121(dut):
     await start_up(dut)
     dut._log.info("Test LD HL, $2121")
 
     opcode = OPCODE_LDHL
     cycles_per_instr = 10
 
-    z80_cycle = 0
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0:
-            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
@@ -393,8 +395,105 @@ async def test__LD_HL2121(dut):
         assert controls['halt'] == 0
         assert controls['busak'] == 0
         z80_cycle += 1
+
+
+@cocotb.test()
+async def test__LD_INxDB(dut):
+    await start_up(dut)
+    dut._log.info("Test IN A, ($DB)")
+
+    opcode = OPCODE_IN
+    cycles_per_instr = 11
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1 or \
+           z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['ioreq'] == 0
+        if z80_cycle % cycles_per_instr == 8 or \
+           z80_cycle % cycles_per_instr == 9:
+            assert controls['ioreq'] == 1
+            assert controls['mreq'] == 0
+            assert addr.to_unsigned() & 0xFF == 0xDB
+        assert controls['wr'] == 0
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
+
+@cocotb.test()
+async def test__LD_OUTxD3(dut):
+    await start_up(dut)
+    dut._log.info("Test OUT ($D3), A")
+
+    opcode = OPCODE_OUT
+    cycles_per_instr = 11
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_READY, OPCODE_XOR)
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        data = opcode if ((z80_cycle % cycles_per_instr) > 0) and ((z80_cycle % cycles_per_instr) < 6) else 'Z' * 8
+        controls, addr, data = await z80_step(dut, BUS_READY, data, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1 or \
+           z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['ioreq'] == 0
+            assert controls['wr'] == 0
+        if z80_cycle % cycles_per_instr == 8 or \
+           z80_cycle % cycles_per_instr == 9:
+            assert controls['ioreq'] == 1
+            assert controls['wr'] == 1
+            assert controls['mreq'] == 0
+            assert controls['rd'] == 0
+            assert addr.to_unsigned() & 0xFF == 0xD3
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
+
+@cocotb.test()
+async def test__LD_ptrHL_A(dut):
+    await start_up(dut)
+    dut._log.info("Test LD (HL), A")
+
+    opcode = OPCODE_STHL
+    cycles_per_instr = 7
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_READY, OPCODE_XOR)
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        data = opcode if ((z80_cycle % cycles_per_instr) > 0) and ((z80_cycle % cycles_per_instr) < 3) else 'Z' * 8
+        controls, addr, data = await z80_step(dut, BUS_READY, data, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['wr'] == 0
+        if z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['wr'] == 1
+            assert controls['rd'] == 0
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
                
-async def z80_step(z80, ctrl_in, data_in, cycle, verbose=False):
+async def z80_step(z80, ctrl_in, data_in, cycle=-1, verbose=False):
     await set_inputs(z80, ctrl_in, data_in)
     await ClockCycles(z80.clk_PAD, 1)
     data = z80.bidir_PAD.value[7:0]
