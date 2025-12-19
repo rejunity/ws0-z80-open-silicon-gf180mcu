@@ -67,6 +67,8 @@ async def start_up(dut):
 CONFIG_EARLY_SIGNALS = 0b10_00_10
 BUS_READY = (CONFIG_EARLY_SIGNALS << 4) | 0b1111 # not BUSRQ, not NMI, not INT, not WAIT
 BUS_WAIT  = (CONFIG_EARLY_SIGNALS << 4) | 0b1110 # not BUSRQ, not NMI, not INT,     WAIT
+BUS_INT   = (CONFIG_EARLY_SIGNALS << 4) | 0b1101 # not BUSRQ, not NMI,     INT, not WAIT
+BUS_NMI   = (CONFIG_EARLY_SIGNALS << 4) | 0b1011 # not BUSRQ,     NMI, not INT, not WAIT
 BUS_REQ   = (CONFIG_EARLY_SIGNALS << 4) | 0b0111 #     BUSRQ, not NMI, not INT, not WAIT
 OPCODE_NOP  = 0x00
 OPCODE_LDHL = 0x21
@@ -119,6 +121,116 @@ async def test__RESET_sequence(dut):
     for i in range(4, 16):
         controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, i, verbose=False)
         print_pins(dut)
+
+@cocotb.test()
+async def test__NMI_sequence(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
+    dut._log.info("Test NMI")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+    await ClockCycles(dut.clk_PAD, 16) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+
+    z80_cycle = 0
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
+        print_pins(dut)
+        z80_cycle += 1
+        if controls["m1"] == 1:
+            break
+
+    for int_cycle in range(1, 5):
+        reached_nmi_routine = False
+        for i in range(64):
+            controls, addr, data = await z80_step(dut, (BUS_NMI if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+            if addr.to_unsigned() == 0x0066:
+                reached_nmi_routine = True
+                for j in range(4):
+                    await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=True)
+                    z80_cycle += 1
+                break
+            z80_cycle += 1
+
+        assert reached_nmi_routine == True
+
+
+
+@cocotb.test()
+async def test__INT_sequence(dut):
+    dut.input_PAD.value = 0
+    dut.bidir_PAD.value = LogicArray('Z' * 32)
+
+    dut._log.info("Test INT")
+    if gl:
+        await enable_power(dut)
+    await start_clock(dut.clk_PAD, Z80_FREQ)
+
+    cocotb.log.info("Reset asserted...")
+    dut.rst_n_PAD.value = False
+    await ClockCycles(dut.clk_PAD, 16) # wait at least 3 cycles with RESET asserted according to Z80 Manual
+
+    dut.rst_n_PAD.value = True
+    cocotb.log.info("Reset deasserted.")
+
+    def print_pins(dut):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        print (f"{' ' * 84}  pins:{ctrl}|{addr}|{data}")
+
+
+    z80_cycle = 0
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_NOP, z80_cycle, verbose=False)
+        print_pins(dut)
+        z80_cycle += 1
+        if controls["m1"] == 1:
+            break
+
+    int_cycle = 5
+    cocotb.log.info("Soft interrupts are DISABLES after RESET.")
+    for i in range(16):
+        controls, addr, data = await z80_step(dut, (BUS_INT if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+        print_pins(dut)
+        if controls["rd"] == 1:
+            assert addr.to_unsigned() == z80_cycle // 4 # no software interrupts
+        z80_cycle += 1
+
+    cocotb.log.info("Enable soft interrupts.")
+    for i in range(4):
+        controls, addr, data = await z80_step(dut, BUS_READY, OPCODE_EI, z80_cycle, verbose=True)
+        pc = addr.to_unsigned()
+        print_pins(dut)
+        z80_cycle += 1
+
+    ioreq_set = False
+    # reached_int_routine = False
+    cocotb.log.info("Enable soft interrupts.")
+    for i in range(32):
+        controls, addr, data = await z80_step(dut, (BUS_INT if i == int_cycle else BUS_READY), OPCODE_NOP, z80_cycle, verbose=True)
+        if controls["ioreq"] == 1:
+            ioreq_set = True
+        # reached_int_routine = addr.to_unsigned() != z80_cycle // 4
+        print_pins(dut)
+        z80_cycle += 1
+
+    assert ioreq_set == True
+    # assert reached_int_routine == True
 
 
 @cocotb.test()
