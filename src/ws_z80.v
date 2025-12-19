@@ -299,23 +299,19 @@ module z80 (
     wire         early_rd_n;
     wire         early_wr_n;
 
-    // assign mreq_n = early_signals ? early_mreq_n : normal_mreq_n;
-    // assign iorq_n = early_signals ? early_iorq_n : normal_iorq_n;
-    // assign rd_n   = early_signals ? early_rd_n   : normal_rd_n;
-    // assign wr_n   = early_signals ? early_wr_n   : normal_wr_n;
+    wire early_rd_n_ = (mreq_n & iorq_n) | early_rd_n; // prevent early_rd happening outside iorq
 
-    assign mreq_n = early_signals[5] ?
-                    (rfsh_n ? (early_mreq_n & normal_mreq_n) : early_mreq_n) :
-                    early_signals[4] ? early_mreq_n : normal_mreq_n;
+    assign mreq_n = early_signals[5] ? (rfsh_n ? (early_mreq_n & normal_mreq_n) : early_mreq_n) :
+                    early_signals[4] ?  early_mreq_n : normal_mreq_n;
     assign iorq_n = early_signals[3] ? (early_iorq_n & normal_iorq_n) :
-                    early_signals[2] ? early_iorq_n : normal_iorq_n;
-    assign rd_n   = early_signals[1] ? (early_rd_n & normal_rd_n):
-                    early_signals[0] ? early_rd_n : normal_rd_n ;
-    assign wr_n   =                                 normal_wr_n;
+                    early_signals[2] ?  early_iorq_n : normal_iorq_n;
+    assign rd_n   = early_signals[1] ? (early_rd_n_ & normal_rd_n) :
+                    early_signals[0] ?  early_rd_n_ : normal_rd_n;
+    assign wr_n   =                                  normal_wr_n;
 
     tv80s #(
         .Mode(0),   // Z80 mode
-        .T2Write(1),// wr_n active in T2
+        .T2Write(1),//.T2Write(1),// wr_n active in T2
         .IOWait(1)  // std I/O cycle
     ) tv80s (
         .reset_n (reset_n),

@@ -70,6 +70,10 @@ BUS_WAIT  = (CONFIG_EARLY_SIGNALS << 4) | 0b1110 # not BUSRQ, not NMI, not INT, 
 BUS_REQ   = (CONFIG_EARLY_SIGNALS << 4) | 0b0111 #     BUSRQ, not NMI, not INT, not WAIT
 OPCODE_NOP  = 0x00
 OPCODE_LDHL = 0x21
+OPCODE_IN   = 0xDB
+OPCODE_OUT  = 0xD3
+OPCODE_STHL = 0x77
+OPCODE_XOR  = 0xAF
 
 @cocotb.test()
 async def test__RESET_sequence(dut):
@@ -339,6 +343,255 @@ async def test__FETCH_timing(dut):
     assert addr(dut) == 0x01
 
 @cocotb.test()
+async def test__READ_timing(dut):
+    await start_up(dut)
+    dut._log.info("Test memory READ timing")
+
+
+    def print_pins(dut, edge=True):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        posneg = '_' if dut.clk_PAD.value == 0 else '^'
+        t_ns = str(cocotb.simulator.get_sim_time()[1]//100)
+        print (f"clk: {str(dut.clk_PAD.value)} {t_ns} {(posneg if edge else ' ') * 70}  pins:{ctrl}|{addr}|{data}")
+
+    def ctrl(dut):
+        return convert_control_pins_to_signals(dut.bidir_PAD.value[31:24])
+    def addr(dut):
+        return dut.bidir_PAD.value[23:8].to_unsigned()
+
+    dut._log.info("Assert WAIT to reach M1|T2 cycle")
+    await set_inputs(dut, BUS_WAIT, OPCODE_LDHL)
+    await ClockCycles(dut.clk_PAD, 4)
+    assert ctrl(dut)["m1"]   == 1
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 1
+    assert addr(dut) == 0
+
+    # We should be at T2 cycle of M1 now
+    dut._log.info("Deassert WAIT")
+    await set_inputs(dut, BUS_READY, OPCODE_LDHL)
+    await ClockCycles(dut.clk_PAD, 1) # T2->T3 
+    await ClockCycles(dut.clk_PAD, 1) # T3->T4
+    dut._log.info("M1|T4 cycle")
+
+    # NOTE: MREQ might be asserted because of the REFRESH cycle during M1|T4
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["rd"]   == 0
+    assert addr(dut) == 0
+    await FallingEdge(dut.clk_PAD); print_pins(dut)
+    dut._log.info("Middle of M1|T4 cycle")
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["rd"]   == 0
+    assert addr(dut) == 0
+    await Timer(10, "ns");         print_pins(dut, False)
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 0
+    assert ctrl(dut)["rd"]   == 0
+    assert addr(dut) == 0
+
+    dut._log.info("FETCH of the new instruction starts here, leading into M2|T1 cycle")
+    # await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # _/
+    # await Timer(100, "ns");         print_pins(dut, False)          # _/^^ 100 ns
+    # assert ctrl(dut)["m1"]   == 1                                     
+    # assert ctrl(dut)["mreq"] == 0
+    # assert ctrl(dut)["rd"]   == 0
+    # await Timer( 10, "ns");         print_pins(dut, False)          # _/^^ 110 ns
+    # assert addr(dut) == 0x01
+    # assert ctrl(dut)["mreq"] == 0                                                                   
+    # await FallingEdge(dut.clk_PAD); print_pins(dut, True)           # _/^^^\
+    # assert addr(dut) == 0x01
+    # assert ctrl(dut)["mreq"] == 0                                   # @TODO: guarantee TdA(MREQf) Min 65ns
+    # await Timer( 85, "ns");         print_pins(dut, False)          # _/^^^\_ 85ns
+    # assert ctrl(dut)["m1"]   == 1
+    # assert ctrl(dut)["mreq"] == 1
+    # assert ctrl(dut)["rd"]   == 1
+    # assert addr(dut) == 0x01
+
+    # await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # _/^^^\___/
+    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\
+    # assert ctrl(dut)["m1"]   == 1
+    # assert ctrl(dut)["mreq"] == 1
+    # assert ctrl(dut)["rd"]   == 1
+    # assert addr(dut) == 0x01
+
+    # await Timer(125-35, "ns");      print_pins(dut, False)          # _/^^^\___/^^^\__ -35ns_/
+    # dut._log.info("DATA is expected to settle, leading into M1|T3")
+    # assert ctrl(dut)["m1"]   == 1
+    # assert ctrl(dut)["mreq"] == 1
+    # assert ctrl(dut)["rd"]   == 1
+    # assert addr(dut) == 0x01
+
+    # await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # _/^^^\___/^^^\___/
+    # await Timer(100, "ns");         print_pins(dut, False)          # _/^^^\___/^^^\___/^^ 100 ns
+    # assert ctrl(dut)["mreq"] == 0
+    # assert ctrl(dut)["rd"]   == 0
+    # assert addr(dut) == 0x01
+    # await Timer( 10, "ns");         print_pins(dut, False)          # _/^^^\___/^^^\___/^^ 110 ns
+    # assert ctrl(dut)["m1"]   == 0
+    # assert addr(dut) == 0x01
+
+
+    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\___/^^^\
+    # await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # _/^^^\___/^^^\___/^^^\___/
+    # await FallingEdge(dut.clk_PAD); print_pins(dut)                 # _/^^^\___/^^^\___/^^^\___/^^^\
+
+    dut._log.info("READ from memory starts here, leading into M2|T1")
+    await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # ... _/
+    await Timer(100, "ns");         print_pins(dut, False)          # ... _/^^ 100 ns
+    assert ctrl(dut)["m1"]   == 0                                     
+    assert ctrl(dut)["mreq"] == 0
+    assert ctrl(dut)["rd"]   == 0
+    await Timer( 10, "ns");         print_pins(dut, False)          # ... _/^^ 110 ns
+    assert addr(dut) == 0x01
+    assert ctrl(dut)["mreq"] == 0     
+    await FallingEdge(dut.clk_PAD); print_pins(dut, True)           # ... _/^^^\
+    assert addr(dut) == 0x01
+    assert ctrl(dut)["mreq"] == 0                                   # @TODO: guarantee TdA(MREQf) Min 65ns
+    await Timer( 85, "ns");         print_pins(dut, False)          # ... _/^^^\_ 85ns
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 1
+    assert addr(dut) == 0x01
+
+
+    await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # ... _/^^^\___/
+    await FallingEdge(dut.clk_PAD); print_pins(dut)                 # ... _/^^^\___/^^^\
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 1
+    assert addr(dut) == 0x01
+
+    await Timer(125-50, "ns");      print_pins(dut, False)          # ... _/^^^\___/^^^\__ -50ns_/
+    dut._log.info("DATA is expected to settle, leading into M2|T3")
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 1
+    assert addr(dut) == 0x01
+
+    await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # ... _/^^^\___/^^^\___/
+    await Timer(100, "ns");         print_pins(dut, False)          # ... _/^^^\___/^^^\___/^^ 100 ns
+    assert ctrl(dut)["mreq"] == 0
+    assert ctrl(dut)["rd"]   == 0
+    assert addr(dut) == 0x01
+    await Timer( 10, "ns");         print_pins(dut, False)          # ... _/^^^\___/^^^\___/^^ 110 ns
+    assert ctrl(dut)["m1"]   == 0
+    assert addr(dut) == 0x01                                        # @TODO: guarantee TdCTr(A) Min 80ns
+
+
+@cocotb.test()
+async def test__WRITE_timing(dut):
+    await start_up(dut)
+    dut._log.info("Test memory WRITE timing")
+
+
+    def print_pins(dut, edge=True):
+        data = dut.bidir_PAD.value[7:0]
+        addr = dut.bidir_PAD.value[23:8]
+        ctrl = dut.bidir_PAD.value[31:24]
+        posneg = '_' if dut.clk_PAD.value == 0 else '^'
+        t_ns = str(cocotb.simulator.get_sim_time()[1]//100)
+        print (f"clk: {str(dut.clk_PAD.value)} {t_ns} {(posneg if edge else ' ') * 70}  pins:{ctrl}|{addr}|{data}")
+
+    def ctrl(dut):
+        return convert_control_pins_to_signals(dut.bidir_PAD.value[31:24])
+    def addr(dut):
+        return dut.bidir_PAD.value[23:8].to_unsigned()
+    def data(dut):
+        return dut.bidir_PAD.value[7:0]
+
+    pc = 0
+    dut._log.info("XOR A")
+    await set_inputs(dut, BUS_WAIT, OPCODE_XOR)
+    await ClockCycles(dut.clk_PAD, 4)
+    await set_inputs(dut, BUS_READY, OPCODE_XOR)
+    await ClockCycles(dut.clk_PAD, 2)
+    pc = pc + 1
+    dut._log.info("LD HL, $2121")
+    await set_inputs(dut, BUS_READY, OPCODE_LDHL)
+    await ClockCycles(dut.clk_PAD, 10)
+    pc = pc + 3
+
+    dut._log.info("Assert WAIT to reach M1|T2 cycle")
+    await set_inputs(dut, BUS_WAIT, OPCODE_STHL)
+    await ClockCycles(dut.clk_PAD, 4)
+    assert ctrl(dut)["m1"]   == 1
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 1
+    assert addr(dut) == pc
+
+    # We should be at T2 cycle of M1 now
+    dut._log.info("Deassert WAIT")
+    await set_inputs(dut, BUS_READY, OPCODE_STHL)
+    await ClockCycles(dut.clk_PAD, 1) # T2->T3
+    await ClockCycles(dut.clk_PAD, 1) # T3->T4
+    dut._log.info("M1|T4 cycle")
+
+    await set_inputs(dut, BUS_READY, 'Z'*8)
+    dut._log.info("WRITE to memory starts here, leading into M3|T1")
+    await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # ... _/
+    await Timer(100, "ns");         print_pins(dut, False)          # ... _/^^ 100 ns
+    assert ctrl(dut)["m1"]   == 0                                     
+    assert ctrl(dut)["mreq"] == 0
+    assert ctrl(dut)["rd"]   == 0
+    assert ctrl(dut)["wr"]   == 0
+    await Timer( 10, "ns");         print_pins(dut, False)          # ... _/^^ 110 ns
+    assert addr(dut) == 0x2121
+    assert ctrl(dut)["mreq"] == 0     
+    await FallingEdge(dut.clk_PAD); print_pins(dut, True)           # ... _/^^^\
+    assert addr(dut) == 0x2121
+    assert ctrl(dut)["mreq"] == 0                                   # @TODO: guarantee TdA(MREQf) Min 65ns
+    await Timer( 85, "ns");         print_pins(dut, False)          # ... _/^^^\_ 85ns
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["rd"]   == 0
+    assert ctrl(dut)["wr"]   == 0
+    assert addr(dut) == 0x2121
+
+    # await Timer(150-85, "ns");      print_pins(dut, False)          # ... _/^^^\_ 150ns
+    # assert ctrl(dut)["m1"]   == 0
+    # assert ctrl(dut)["mreq"] == 1
+    # assert ctrl(dut)["rd"]   == 0
+    # assert ctrl(dut)["wr"]   == 0
+    # assert addr(dut) == 0x02
+    # assert data(dut) == 0x00 # will fail
+
+    # await Timer(150+80-85, "ns");   print_pins(dut, False)          # ... _/^^^\_ 150ns + 80ns
+    # assert ctrl(dut)["m1"]   == 0
+    # assert ctrl(dut)["mreq"] == 1
+    # assert ctrl(dut)["rd"]   == 0
+    # assert ctrl(dut)["wr"]   == 0
+    # assert addr(dut) == 0x02
+    # assert data(dut) == 0x00 # will fail
+
+    # @TODO: guarantee TdCf(D)    Max 150ns - "Clock Fall to Data Valid delay"
+    # @TODO: guarantee TdD(WRf)Mw Min 80ns  - "Data stable prior to /WR Fall"
+    # @TODO: guarantee TwWR       Min 220ns - "/WR pulse width"
+    # @TODO: guarantee TdWRr(D)   Min 60ns  - "Data stable from /WR Rise"
+
+    await RisingEdge(dut.clk_PAD) ; print_pins(dut)                 # ... _/^^^\___/
+    await FallingEdge(dut.clk_PAD); print_pins(dut)                 # ... _/^^^\___/^^^\
+    await Timer(80, "ns");          print_pins(dut, False)          # ... _/^^^\___/^^^\_ 80ns
+    assert ctrl(dut)["m1"]   == 0
+    assert ctrl(dut)["mreq"] == 1
+    assert ctrl(dut)["wr"]   == 1
+    assert ctrl(dut)["rd"]   == 0
+    assert data(dut) == '0'*8
+    assert addr(dut) == 0x2121
+
+
+    await RisingEdge(dut.clk_PAD);  print_pins(dut)                 # ... _/^^^\___/^^^\___/
+    await Timer(85, "ns");          print_pins(dut, False)          # ... _/^^^\___/^^^\___/^^ 85 ns
+    assert ctrl(dut)["mreq"] == 0
+    assert ctrl(dut)["wr"]   == 0
+    assert addr(dut) == 0x2121
+    await Timer( 10, "ns");         print_pins(dut, False)          # ... _/^^^\___/^^^\___/^^ 95 ns
+    assert ctrl(dut)["m1"]   == 0
+    assert addr(dut) == 0x2121                                      # @TODO: guarantee TdCTr(A) Min 80ns
+
+
+@cocotb.test()
 async def test__NOP(dut):
     await start_up(dut)
     dut._log.info("Test NOP")
@@ -346,11 +599,10 @@ async def test__NOP(dut):
     opcode = OPCODE_NOP
     cycles_per_instr = 4
     
-    z80_cycle = 0
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0:
-            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
@@ -367,18 +619,17 @@ async def test__NOP(dut):
         z80_cycle += 1
 
 @cocotb.test()
-async def test__LD_HL2121(dut):
+async def test__LD_HLx2121(dut):
     await start_up(dut)
     dut._log.info("Test LD HL, $2121")
 
     opcode = OPCODE_LDHL
     cycles_per_instr = 10
 
-    z80_cycle = 0
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
     for i in range(32):
         controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
-        if z80_cycle == 0:
-            continue
 
         if z80_cycle % cycles_per_instr == 0 or \
            z80_cycle % cycles_per_instr == 1:
@@ -393,8 +644,105 @@ async def test__LD_HL2121(dut):
         assert controls['halt'] == 0
         assert controls['busak'] == 0
         z80_cycle += 1
+
+
+@cocotb.test()
+async def test__LD_INxDB(dut):
+    await start_up(dut)
+    dut._log.info("Test IN A, ($DB)")
+
+    opcode = OPCODE_IN
+    cycles_per_instr = 11
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        controls, addr, data = await z80_step(dut, BUS_READY, opcode, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1 or \
+           z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['ioreq'] == 0
+        if z80_cycle % cycles_per_instr == 8 or \
+           z80_cycle % cycles_per_instr == 9:
+            assert controls['ioreq'] == 1
+            assert controls['mreq'] == 0
+            assert addr.to_unsigned() & 0xFF == 0xDB
+        assert controls['wr'] == 0
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
+
+@cocotb.test()
+async def test__LD_OUTxD3(dut):
+    await start_up(dut)
+    dut._log.info("Test OUT ($D3), A")
+
+    opcode = OPCODE_OUT
+    cycles_per_instr = 11
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_READY, OPCODE_XOR)
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        data = opcode if ((z80_cycle % cycles_per_instr) > 0) and ((z80_cycle % cycles_per_instr) < 6) else 'Z' * 8
+        controls, addr, data = await z80_step(dut, BUS_READY, data, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1 or \
+           z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['ioreq'] == 0
+            assert controls['wr'] == 0
+        if z80_cycle % cycles_per_instr == 8 or \
+           z80_cycle % cycles_per_instr == 9:
+            assert controls['ioreq'] == 1
+            assert controls['wr'] == 1
+            assert controls['mreq'] == 0
+            assert controls['rd'] == 0
+            assert addr.to_unsigned() & 0xFF == 0xD3
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
+
+@cocotb.test()
+async def test__LD_ptrHL_A(dut):
+    await start_up(dut)
+    dut._log.info("Test LD (HL), A")
+
+    opcode = OPCODE_STHL
+    cycles_per_instr = 7
+
+    z80_cycle = 1
+    for i in range(4): await z80_step(dut, BUS_READY, OPCODE_XOR)
+    for i in range(4): await z80_step(dut, BUS_WAIT, opcode)
+    for i in range(32):
+        data = opcode if ((z80_cycle % cycles_per_instr) > 0) and ((z80_cycle % cycles_per_instr) < 3) else 'Z' * 8
+        controls, addr, data = await z80_step(dut, BUS_READY, data, z80_cycle, verbose=True)
+
+        if z80_cycle % cycles_per_instr == 0 or \
+           z80_cycle % cycles_per_instr == 1:
+            assert controls['m1'] == 1
+        if z80_cycle % cycles_per_instr == 1:
+            assert controls['mreq'] == 1
+            assert controls['rd'] == 1
+            assert controls['wr'] == 0
+        if z80_cycle % cycles_per_instr == 5:
+            assert controls['mreq'] == 1
+            assert controls['wr'] == 1
+            assert controls['rd'] == 0
+        assert controls['halt'] == 0
+        assert controls['busak'] == 0
+        z80_cycle += 1
                
-async def z80_step(z80, ctrl_in, data_in, cycle, verbose=False):
+async def z80_step(z80, ctrl_in, data_in, cycle=-1, verbose=False):
     await set_inputs(z80, ctrl_in, data_in)
     await ClockCycles(z80.clk_PAD, 1)
     data = z80.bidir_PAD.value[7:0]
